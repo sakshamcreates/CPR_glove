@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #F5F2EA;
+    --bg-secondary: #ECE8DE;
+    --text-primary: #1E2421;
+    --text-secondary: #68706B;
+    --border-color: #D8D4C9;
+    --brand-green: #173F35;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Restrained, non-distracting scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #ECE8DE;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D8D4C9;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #BDB7A7;
+}
+
+/* Subtle grid pattern for technical diagrams */
+.tech-grid {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(216, 212, 201, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(216, 212, 201, 0.4) 1px, transparent 1px);
+}
