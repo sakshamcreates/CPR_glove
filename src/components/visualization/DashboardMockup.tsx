@@ -27,7 +27,7 @@ export const DashboardMockup: React.FC = () => {
           </div>
           <span className="text-content-muted text-xs">|</span>
           <span className="font-mono text-[11px] text-content-secondary">
-            SANJEEVANI-01
+            PULSEMATE-01
           </span>
         </div>
 

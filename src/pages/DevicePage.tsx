@@ -13,7 +13,7 @@ export const DevicePage: React.FC = () => {
   return (
     <PageContainer
       eyebrow="DEVICE"
-      title="SANJEEVANI Device"
+      title="PULSEMATE Device"
       subtitle="Physical prototype hardware specifications, system architecture, and technical reference."
       actions={
         <div className="flex items-center gap-3">
@@ -31,7 +31,7 @@ export const DevicePage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-base font-bold text-content-primary">
-                SANJEEVANI-01
+                PULSEMATE-01
               </span>
               <span className="font-mono text-xs px-2 py-0.5 bg-canvas-muted text-content-secondary rounded border border-border">
                 HARDWARE PROTOTYPE
@@ -276,7 +276,7 @@ export const DevicePage: React.FC = () => {
             Motion-Based Sensing Scope & Technical Limitation
           </h4>
           <p className="text-xs text-content-secondary leading-relaxed">
-            SANJEEVANI is a motion-based CPR feedback prototype. The onboard MPU6050 sensor estimates real-time rhythm cadence, linear acceleration, stroke consistency, and palm orientation/tilt. It does <strong>not</strong> directly measure actual physical compression force, true chest depth, or clinical resuscitation effectiveness. The device is designed for guided practice and muscle memory training, not as medical-grade diagnostic equipment.
+            PULSEMATE is a motion-based CPR feedback prototype. The onboard MPU6050 sensor estimates real-time rhythm cadence, linear acceleration, stroke consistency, and palm orientation/tilt. It does <strong>not</strong> directly measure actual physical compression force, true chest depth, or clinical resuscitation effectiveness. The device is designed for guided practice and muscle memory training, not as medical-grade diagnostic equipment.
           </p>
         </div>
       </div>

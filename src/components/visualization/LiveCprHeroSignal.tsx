@@ -91,7 +91,7 @@ export const LiveCprHeroSignal: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-sm bg-brand-green" />
           <span className="font-mono text-xs font-bold tracking-wider text-content-primary uppercase">
-            SANJEEVANI LIVE
+            PULSEMATE LIVE
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ export const LiveCprHeroSignal: React.FC = () => {
           viewBox="0 0 460 190"
           style={{ display: 'block', width: '100%', overflow: 'hidden' }}
           role="img"
-          aria-label="Sanjeevani CPR Heart and Live Synchronized ECG Waveform"
+          aria-label="PULSEMATE CPR Heart and Live Synchronized ECG Waveform"
         >
           <defs>
             {/* Heart clip path for the interior white ECG trace */}

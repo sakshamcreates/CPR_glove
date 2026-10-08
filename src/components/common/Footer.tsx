@@ -21,7 +21,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-content-primary tracking-tight text-base">
-                SANJEEVANI
+                PULSEMATE
               </span>
             </div>
             <p className="text-xs text-content-secondary mt-1">

@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MANOMITRA — Master Pitch Deck (10 Slides)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            beige: {
+              50: '#FBF9F5',
+              100: '#F6F3ED',
+              200: '#EFEBE1',
+              300: '#E2DCD1',
+              400: '#C8BEAF'
+            },
+            forest: {
+              50: '#EBF5EE',
+              100: '#D7EBDE',
+              600: '#2D6A4F',
+              700: '#1B4332',
+              800: '#143526',
+              900: '#0D241A'
+            },
+            burgundy: {
+              50: '#FDF2F4',
+              100: '#FCE4E8',
+              600: '#8C2F44',
+              700: '#6B1D2F',
+              800: '#541423'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media print {
+      body { background: #F6F3ED !important; color: #1C1917 !important; }
+      .no-print { display: none !important; }
+      .slide-container { display: block !important; }
+      .slide-card {
+        page-break-after: always !important;
+        break-after: page !important;
+        height: 100vh !important;
+        width: 100vw !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        padding: 2.5rem !important;
+        background: #F6F3ED !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-beige-100 text-stone-900 font-sans antialiased select-none overflow-hidden h-screen w-screen flex flex-col justify-between">
+
+  <!-- TOP BAR -->
+  <header class="no-print h-14 border-b border-beige-300 bg-white/90 backdrop-blur px-6 flex items-center justify-between z-30">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-forest-700 flex items-center justify-center text-white font-bold text-base shadow-sm">
+        M
+      </div>
+      <div>
+        <span class="font-extrabold tracking-tight text-forest-700 text-base">MANOMITRA</span>
+        <span class="text-xs text-stone-500 ml-2 hidden sm:inline">| Your Companion for a Healthier Mind</span>
+      </div>
+    </div>
+
+    <!-- Slide controls -->
+    <div class="flex items-center space-x-2">
+      <span class="text-xs font-mono text-forest-700 font-bold px-2.5 py-0.5 rounded bg-forest-50 border border-forest-600/30" id="slide-indicator">
+        01 / 10
+      </span>
+      <div class="flex items-center space-x-1 ml-3">
+        <button onclick="prevSlide()" class="p-1.5 rounded-lg bg-white border border-beige-300 hover:bg-beige-200 text-stone-700 transition-colors" title="Previous Slide (←)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button onclick="nextSlide()" class="p-1.5 rounded-lg bg-white border border-beige-300 hover:bg-beige-200 text-stone-700 transition-colors" title="Next Slide (→)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <button onclick="toggleNotes()" class="ml-2 px-2.5 py-1 text-xs rounded-lg border border-beige-300 bg-white hover:bg-beige-200 text-stone-700 transition-colors flex items-center space-x-1" title="Toggle Speaker Script (N)">
+        <span>🎤 Script</span>
+      </button>
+      <button onclick="window.print()" class="px-2.5 py-1 text-xs rounded-lg border border-beige-300 bg-white hover:bg-beige-200 text-stone-700 transition-colors hidden md:inline-flex items-center space-x-1" title="Save as PDF">
+        <span>🖨️ PDF</span>
+      </button>
+      <button onclick="toggleFullscreen()" class="p-1.5 rounded-lg bg-white border border-beige-300 hover:bg-beige-200 text-stone-700 transition-colors" title="Fullscreen (F)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN SLIDES -->
+  <main class="flex-1 relative overflow-hidden flex items-center justify-center p-3 sm:p-6 lg:p-8">
+
+    <!-- SLIDE 1: COVER -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300" id="slide-1">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">01 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-8 text-center max-w-4xl mx-auto w-full">
+        <div>
+          <h1 class="text-5xl sm:text-6xl font-extrabold tracking-tight text-forest-700">MANOMITRA</h1>
+          <p class="text-xl sm:text-2xl font-bold text-burgundy-700 mt-2">"Your Companion for a Healthier Mind."</p>
+          <p class="text-stone-600 text-sm sm:text-base mt-2">AI-Assisted Cognitive Engagement & Caregiver Support for Ageing Minds</p>
+        </div>
+
+        <!-- Ecosystem Diagram: SENIOR ➔ MANOMITRA ➔ CAREGIVER -->
+        <div class="bg-beige-50 border border-beige-300 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+            <div class="p-4 rounded-xl bg-forest-50 border border-forest-600/30 text-left">
+              <div class="text-forest-700 font-bold text-base">👴 SENIOR</div>
+              <div class="text-xs text-stone-600 mt-1">Voice-friendly play & daily routine check-ins</div>
+            </div>
+            <div class="p-4 rounded-xl bg-white border border-forest-700 text-center shadow-sm">
+              <div class="text-forest-700 font-bold text-base">🧠 MANOMITRA PLATFORM</div>
+              <div class="text-xs text-stone-600 mt-1">Adaptive engine & offline-first sync</div>
+            </div>
+            <div class="p-4 rounded-xl bg-burgundy-50 border border-burgundy-700/30 text-left">
+              <div class="text-burgundy-700 font-bold text-base">👨‍👩‍👧 CAREGIVER</div>
+              <div class="text-xs text-stone-600 mt-1">WhatsApp alerts & weekly stability trends</div>
+            </div>
+          </div>
+
+          <!-- 5 Steps Under Manomitra -->
+          <div class="border-t border-beige-300 pt-4">
+            <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-mono font-bold text-forest-700">
+              <span class="px-3 py-1.5 rounded-lg bg-forest-50 border border-forest-600/30">01 PLAY</span>
+              <span class="text-stone-400">➔</span>
+              <span class="px-3 py-1.5 rounded-lg bg-forest-50 border border-forest-600/30">02 MEASURE</span>
+              <span class="text-stone-400">➔</span>
+              <span class="px-3 py-1.5 rounded-lg bg-forest-50 border border-forest-600/30">03 ADAPT</span>
+              <span class="text-stone-400">➔</span>
+              <span class="px-3 py-1.5 rounded-lg bg-forest-50 border border-forest-600/30">04 TRACK</span>
+              <span class="text-stone-400">➔</span>
+              <span class="px-3 py-1.5 rounded-lg bg-burgundy-50 border border-burgundy-700/30 text-burgundy-700">05 SUPPORT</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-center text-xs text-stone-500 font-medium">
+        Connecting daily senior engagement directly with caregiver peace of mind.
+      </div>
+    </div>
+
+    <!-- SLIDE 2: THE PROBLEM -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-2">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">02 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">THE PROBLEM</h2>
+          <p class="text-stone-600 text-sm mt-1">Cognitive decline affects both the senior and the entire family caregiving ecosystem.</p>
+        </div>
+
+        <!-- Causal Flow -->
+        <div class="bg-burgundy-50/50 border border-burgundy-700/30 rounded-xl p-6">
+          <div class="text-xs font-mono font-bold text-burgundy-700 uppercase tracking-wider mb-4">THE CAUSAL ESCALATION</div>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-center">
+            <div class="p-3.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="text-burgundy-700 font-bold text-sm">COGNITIVE DRIFT</div>
+              <div class="text-xs text-stone-600 mt-1">Subtle micro-changes in recall & response latency</div>
+            </div>
+            <div class="p-3.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="text-forest-700 font-bold text-sm">DAILY ROUTINE CHANGES</div>
+              <div class="text-xs text-stone-600 mt-1">Missed medications, anxiety & withdrawal</div>
+            </div>
+            <div class="p-3.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="text-burgundy-700 font-bold text-sm">CAREGIVER BLINDSPOT</div>
+              <div class="text-xs text-stone-600 mt-1">Families lack continuous visibility between visits</div>
+            </div>
+            <div class="p-3.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="text-burgundy-600 font-bold text-sm">REACTIVE CARE</div>
+              <div class="text-xs text-stone-600 mt-1">Acute disorientation & emergency response</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Large Statistics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="p-6 rounded-xl bg-beige-50 border border-beige-300">
+            <div class="text-4xl font-extrabold text-forest-700 font-mono">7.4%</div>
+            <div class="text-stone-900 font-bold text-sm mt-1">Dementia Prevalence in Indian Seniors (Ages 60+)</div>
+            <div class="text-xs text-stone-600 mt-1">Identified across urban and rural demographics in the national LASI-DAD study.</div>
+          </div>
+
+          <div class="p-6 rounded-xl bg-beige-50 border border-beige-300">
+            <div class="text-4xl font-extrabold text-burgundy-700 font-mono">8.8M ➔ 14.3M</div>
+            <div class="text-stone-900 font-bold text-sm mt-1">Projected Cases in India (2026 to 2036)</div>
+            <div class="text-xs text-stone-600 mt-1">+25% growth over the next decade creating an overwhelming informal caregiving challenge.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400 font-mono">
+        Data Sources: Longitudinal Aging Study in India Diagnostic Assessment of Dementia (LASI-DAD), The Lancet Commission (2024).
+      </div>
+    </div>
+
+    <!-- SLIDE 3: WHY CURRENT APPROACHES FALL SHORT -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-3">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">03 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">THE GAP IN EXISTING SOLUTIONS</h2>
+          <p class="text-stone-600 text-sm mt-1">Current options leave a disconnect between daily senior engagement and caregiver visibility.</p>
+        </div>
+
+        <!-- Comparison Matrix Table -->
+        <div class="overflow-hidden border border-beige-300 rounded-xl shadow-sm">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-forest-700 text-white font-mono text-xs">
+                <th class="p-3.5">SOLUTION CATEGORY</th>
+                <th class="p-3.5 text-center">DAILY ENGAGE</th>
+                <th class="p-3.5 text-center">CAREGIVER LOOP</th>
+                <th class="p-3.5 text-center">OFFLINE USE</th>
+                <th class="p-3.5 text-center">INDIAN CONTEXT</th>
+                <th class="p-3.5 text-center">ADAPTIVE CARE</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-beige-300">
+              <tr class="bg-white">
+                <td class="p-3.5 font-medium text-stone-800">Clinical Therapy (Hospital / Paper)</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-forest-700 font-bold">✓</td>
+                <td class="p-3.5 text-center text-stone-600">△</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+              </tr>
+              <tr class="bg-white">
+                <td class="p-3.5 font-medium text-stone-800">Brain Training Apps (Western)</td>
+                <td class="p-3.5 text-center text-forest-700 font-bold">✓</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-stone-600">△</td>
+              </tr>
+              <tr class="bg-white">
+                <td class="p-3.5 font-medium text-stone-800">Generic AI Chatbots</td>
+                <td class="p-3.5 text-center text-stone-600">△</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+              </tr>
+              <tr class="bg-white">
+                <td class="p-3.5 font-medium text-stone-800">Caregiver Alarms & Trackers</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+                <td class="p-3.5 text-center text-forest-700 font-bold">✓</td>
+                <td class="p-3.5 text-center text-stone-600">△</td>
+                <td class="p-3.5 text-center text-stone-600">△</td>
+                <td class="p-3.5 text-center text-burgundy-700 font-bold">✕</td>
+              </tr>
+              <tr class="bg-forest-50 font-bold text-forest-900 border-t-2 border-forest-700">
+                <td class="p-3.5 text-forest-700">MANOMITRA</td>
+                <td class="p-3.5 text-center text-forest-700">✓</td>
+                <td class="p-3.5 text-center text-forest-700">✓</td>
+                <td class="p-3.5 text-center text-forest-700">✓</td>
+                <td class="p-3.5 text-center text-forest-700">✓</td>
+                <td class="p-3.5 text-center text-forest-700">✓</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-forest-50 border border-forest-600/30 text-center font-bold text-forest-700 text-sm">
+          "One continuous loop for senior engagement + caregiver support."
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400">
+        Objective: Connecting elder stimulation with passive family peace of mind.
+      </div>
+    </div>
+
+    <!-- SLIDE 4: THE SOLUTION -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-4">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">04 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">THE MANOMITRA CARE LOOP</h2>
+          <p class="text-stone-600 text-sm mt-1">A continuous 5-stage loop connecting daily mental vitality with proactive family visibility.</p>
+        </div>
+
+        <!-- Circular Loop Layout with Center Engine -->
+        <div class="bg-beige-50 border border-beige-300 rounded-2xl p-6 sm:p-8 relative">
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 text-center">
+            <div class="p-4 rounded-xl bg-white border border-forest-600/30 shadow-sm">
+              <div class="text-forest-700 font-bold text-sm">01 • PLAY</div>
+              <div class="text-xs text-stone-600 mt-1">Cognitive Games (Culture-rooted)</div>
+            </div>
+            <div class="p-4 rounded-xl bg-white border border-forest-600/30 shadow-sm">
+              <div class="text-forest-700 font-bold text-sm">02 • MEASURE</div>
+              <div class="text-xs text-stone-600 mt-1">Accuracy + Response Time Telemetry</div>
+            </div>
+            <div class="p-4 rounded-xl bg-white border border-forest-600/30 shadow-sm">
+              <div class="text-forest-700 font-bold text-sm">03 • ADAPT</div>
+              <div class="text-xs text-stone-600 mt-1">Dynamic Difficulty & Pace Tuning</div>
+            </div>
+            <div class="p-4 rounded-xl bg-white border border-forest-600/30 shadow-sm">
+              <div class="text-forest-700 font-bold text-sm">04 • TRACK</div>
+              <div class="text-xs text-stone-600 mt-1">7-Day Longitudinal Stability Trends</div>
+            </div>
+            <div class="p-4 rounded-xl bg-burgundy-50 border border-burgundy-700/30 shadow-sm">
+              <div class="text-burgundy-700 font-bold text-sm">05 • SUPPORT</div>
+              <div class="text-xs text-stone-600 mt-1">Caregiver WhatsApp Action & SOS</div>
+            </div>
+          </div>
+
+          <!-- Center Box -->
+          <div class="mt-6 p-4 rounded-xl bg-forest-700 text-white text-center max-w-md mx-auto shadow-md">
+            <div class="font-bold text-base">MANOMITRA ENGINE</div>
+            <div class="text-xs text-forest-100 mt-0.5">Adaptive Difficulty • Offline Persistence • Longitudinal Signals</div>
+          </div>
+        </div>
+
+        <div class="text-center font-bold text-forest-700 text-lg">
+          "The loop is the product."
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400">
+        Transforms daily morning play into continuous family peace of mind.
+      </div>
+    </div>
+
+    <!-- SLIDE 5: HOW IT WORKS -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-5">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">05 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">HOW MANOMITRA WORKS</h2>
+          <p class="text-stone-600 text-sm mt-1">Frictionless for the senior. Actionable for the family.</p>
+        </div>
+
+        <!-- 3-Lane Diagram -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-5 rounded-xl bg-forest-50 border border-forest-600/30">
+            <div class="text-forest-700 font-bold text-base mb-3">SENIOR</div>
+            <ul class="text-xs text-stone-700 space-y-2">
+              <li>• <strong>Simple Entry:</strong> 1-tap passkey biometric or tactile PIN</li>
+              <li>• <strong>5-Min Play:</strong> Voice-guided culturally grounded games</li>
+              <li>• <strong>Routine Check-In:</strong> Morning medication & hydration confirmation</li>
+            </ul>
+          </div>
+
+          <div class="p-5 rounded-xl bg-white border border-beige-300 shadow-sm">
+            <div class="text-forest-700 font-bold text-base mb-3">MANOMITRA ENGINE</div>
+            <ul class="text-xs text-stone-700 space-y-2">
+              <li>• <strong>Capture Performance:</strong> Latency & error recording</li>
+              <li>• <strong>Adapt Difficulty:</strong> Real-time in-game pacing</li>
+              <li>• <strong>Store Locally & Sync:</strong> IndexedDB local persistence</li>
+            </ul>
+          </div>
+
+          <div class="p-5 rounded-xl bg-burgundy-50 border border-burgundy-700/30">
+            <div class="text-burgundy-700 font-bold text-base mb-3">CAREGIVER</div>
+            <ul class="text-xs text-stone-700 space-y-2">
+              <li>• <strong>WhatsApp Updates:</strong> Routine check-in confirmations</li>
+              <li>• <strong>7-Day Trends:</strong> Stability analytics dashboard</li>
+              <li>• <strong>Red-Flag Signals:</strong> Immediate alerts for missed routines</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Prominent Offline Flow -->
+        <div class="p-4 rounded-xl bg-beige-50 border border-forest-600/30">
+          <div class="text-xs font-mono font-bold text-forest-700 uppercase mb-2">OFFLINE-CAPABLE ARCHITECTURE</div>
+          <div class="flex flex-wrap items-center justify-between text-xs font-mono font-bold text-forest-700 gap-2">
+            <span class="p-2 rounded bg-white border border-beige-300">GAMEPLAY</span>
+            <span>➔</span>
+            <span class="p-2 rounded bg-white border border-beige-300">LOCAL STORAGE (IndexedDB)</span>
+            <span>➔</span>
+            <span class="p-2 rounded bg-white border border-beige-300">SYNC QUEUE</span>
+            <span>➔</span>
+            <span class="p-2 rounded bg-white border border-beige-300">INTERNET RETURNS</span>
+            <span>➔</span>
+            <span class="p-2 rounded bg-white border border-beige-300">CLOUD SYNC</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400">
+        No app installation required for caregivers — works through everyday WhatsApp.
+      </div>
+    </div>
+
+    <!-- SLIDE 6: WHAT WE HAVE BUILT -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-6">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">06 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">WORKING PROTOTYPE</h2>
+          <p class="text-stone-600 text-sm mt-1">Tested core functionality across patient interface, edge storage, and caregiver notification.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- 5 Proof Blocks -->
+          <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3.5 rounded-xl bg-beige-50 border border-beige-300">
+              <div class="font-bold text-forest-700 text-sm">🎮 5 Cognitive Games</div>
+              <div class="text-stone-600 mt-1">Market Day Basket, Daily Sequencer, Faces & Recall, Odd One Out, Sound & Rhythm Match.</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-beige-50 border border-beige-300">
+              <div class="font-bold text-forest-700 text-sm">📱 Offline-First PWA</div>
+              <div class="text-stone-600 mt-1">React 19 + Workbox caching for zero-internet gameplay; IndexedDB saves routines locally.</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-beige-50 border border-beige-300">
+              <div class="font-bold text-forest-700 text-sm">🤖 Adaptive Engine</div>
+              <div class="text-stone-600 mt-1">FastAPI microservice evaluating response latency and error clusters to calibrate task difficulty.</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-beige-50 border border-beige-300">
+              <div class="font-bold text-forest-700 text-sm">👨‍👩‍👧 Caregiver Portal</div>
+              <div class="text-stone-600 mt-1">Web command center visualizing 7-day adherence curves, latency trends, and emergency red-flags.</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-beige-50 border border-burgundy-700/30 sm:col-span-2">
+              <div class="font-bold text-burgundy-700 text-sm">💬 WhatsApp Companion</div>
+              <div class="text-stone-600 mt-1">Live WhatsApp Cloud API test bot (<code class="text-burgundy-700 font-bold">wa.me/15556680031</code>) delivering daily routine acknowledgments.</div>
+            </div>
+          </div>
+
+          <!-- Built vs Planned Distinction -->
+          <div class="p-5 rounded-xl bg-beige-50 border border-beige-300 flex flex-col justify-between text-xs">
+            <div>
+              <div class="text-xs font-mono font-bold text-forest-700 uppercase mb-2">BUILT & FUNCTIONAL:</div>
+              <ul class="space-y-1 text-stone-700">
+                <li>✓ 5 Clinically mapped games</li>
+                <li>✓ Offline PWA & IndexedDB sync</li>
+                <li>✓ Adaptive difficulty microservice</li>
+                <li>✓ Caregiver web portal</li>
+                <li>✓ WhatsApp companion bot</li>
+              </ul>
+            </div>
+            <div class="mt-4 pt-3 border-t border-beige-300">
+              <div class="text-xs font-mono font-bold text-burgundy-700 uppercase mb-2">PLANNED ROADMAP:</div>
+              <ul class="space-y-1 text-stone-500">
+                <li>⏳ Feature phone IVR/SMS mode</li>
+                <li>⏳ ASHA community tablet kiosk</li>
+                <li>⏳ Tele-MANAS helpline integration</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400">
+        Working prototype: clearly distinguishing existing capabilities from future roadmap milestones.
+      </div>
+    </div>
+
+    <!-- SLIDE 7: WHERE AI ACTUALLY FITS -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-7">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">07 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">WHERE AI ACTUALLY FITS</h2>
+          <p class="text-stone-600 text-sm mt-1">Purpose-built, explainable intelligence. Not a diagnostic system.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Left: Vertical Pipeline -->
+          <div class="p-5 rounded-xl bg-beige-50 border border-beige-300 space-y-3 text-xs">
+            <div class="text-xs font-mono font-bold text-forest-700 uppercase">APPLIED ADAPTIVE PIPELINE</div>
+            <div class="p-2.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="font-bold text-forest-700">USER PERFORMANCE INPUT</div>
+              <div class="text-stone-600 mt-0.5">Accuracy • Reaction Time • Mistakes • Pauses</div>
+            </div>
+            <div class="text-center text-forest-700 font-bold">↓</div>
+            <div class="p-2.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="font-bold text-forest-700">ADAPTIVE ENGINE</div>
+              <div class="text-stone-600 mt-0.5">Real-time pacing • Dynamic difficulty • Audio hints</div>
+            </div>
+            <div class="text-center text-forest-700 font-bold">↓</div>
+            <div class="p-2.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="font-bold text-forest-700">LONGITUDINAL ANALYSIS</div>
+              <div class="text-stone-600 mt-0.5">Multi-session latency drift & recovery trends</div>
+            </div>
+            <div class="text-center text-burgundy-700 font-bold">↓</div>
+            <div class="p-2.5 rounded-lg bg-burgundy-50 border border-burgundy-700/30">
+              <div class="font-bold text-burgundy-700">CAREGIVER SIGNALS</div>
+              <div class="text-stone-600 mt-0.5">Weekly stability trends & alert notifications</div>
+            </div>
+          </div>
+
+          <!-- Right: Controlled Modules & Failsafe -->
+          <div class="space-y-3 text-xs">
+            <div class="p-4 rounded-xl bg-beige-50 border border-beige-300">
+              <div class="font-bold text-forest-700 text-sm">CONVERSATIONAL COMPANION (GEMINI)</div>
+              <ul class="text-stone-700 mt-2 space-y-1">
+                <li>• Context-constrained conversations grounded in schedule JSON</li>
+                <li>• Empathetic daily routine & reminiscence check-ins</li>
+                <li>• Clinical medical questions redirected to family caregiver</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-beige-50 border border-beige-300">
+              <div class="font-bold text-forest-700 text-sm">MULTIMODAL VOICE LAYER</div>
+              <ul class="text-stone-700 mt-2 space-y-1">
+                <li>• Web Speech API + Bhashini translation architecture</li>
+                <li>• English and Hindi voice synthesis with auto-accent adaptation</li>
+              </ul>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-forest-50 border border-forest-600/30">
+              <div class="font-bold text-forest-700">🛡️ DEFENSIBLE ENGINEERING BOUNDARIES:</div>
+              <div class="text-stone-600 mt-1">
+                • Local fallback when cloud services are unavailable (6s timeout)<br>
+                • Explicitly an engagement & monitoring tool, not a diagnostic system
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400">
+        AI is applied to reaction latency and task pacing, not generic generation.
+      </div>
+    </div>
+
+    <!-- SLIDE 8: SYSTEM ARCHITECTURE -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-8">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">08 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-4">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">SYSTEM ARCHITECTURE</h2>
+          <p class="text-stone-600 text-sm mt-1">A modular, edge-first architecture ensuring uninterrupted access.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Main Stack (2 cols) -->
+          <div class="lg:col-span-2 space-y-2 text-xs">
+            <div class="p-3 rounded-lg bg-forest-50 border border-forest-600/30">
+              <div class="font-bold text-forest-700">SENIOR INTERACTION</div>
+              <div class="text-stone-600">Voice prompts • Giant 56px+ touch zones • Zero typing barrier</div>
+            </div>
+            <div class="text-center text-forest-700">↓</div>
+            <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="font-bold text-forest-700">PATIENT PWA</div>
+              <div class="text-stone-600">React 19 • Vite • Web Speech API • WebAuthn biometric login</div>
+            </div>
+            <div class="text-center text-forest-700">↓ (Edge Storage)</div>
+            <div class="p-3 rounded-lg bg-forest-50 border-2 border-forest-700">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-forest-700">LOCAL-FIRST STORAGE (EDGE)</span>
+                <span class="px-2 py-0.5 rounded bg-forest-700 text-white font-mono text-[10px]">100% OFFLINE</span>
+              </div>
+              <div class="text-stone-600 mt-1">IndexedDB Cache & Sync Queue • Stores profiles & routines locally</div>
+            </div>
+            <div class="text-center text-forest-700">↓ (Background Sync on Reconnect)</div>
+            <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+              <div class="font-bold text-forest-700">API / GATEWAY</div>
+              <div class="text-stone-600">Node.js • Role-scoped JWT sessions • DPDP-aligned data architecture</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <div class="p-2.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+                <div class="font-bold text-forest-700">AI / ML (FastAPI)</div>
+                <div class="text-stone-600 text-[11px]">Adaptive difficulty scoring</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-white border border-beige-300 shadow-sm">
+                <div class="font-bold text-forest-700">DATABASE (MongoDB)</div>
+                <div class="text-stone-600 text-[11px]">AES-256 encrypted at rest</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Caregiver Delivery Layer -->
+          <div class="p-5 rounded-xl bg-burgundy-50 border border-burgundy-700/30 flex flex-col justify-between text-xs">
+            <div>
+              <div class="font-bold text-burgundy-700 text-sm mb-3">CAREGIVER DELIVERY LAYER</div>
+              <div class="space-y-3">
+                <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+                  <div class="font-bold text-stone-900">Caregiver Web Dashboard</div>
+                  <div class="text-stone-600 mt-1">7-Day adherence & cognitive stability curves</div>
+                </div>
+                <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+                  <div class="font-bold text-stone-900">WhatsApp Cloud API</div>
+                  <div class="text-stone-600 mt-1">Zero-install daily nudges & emergency red-flags</div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-burgundy-200 text-stone-600">
+              Edge / Device ➔ Local Data ➔ Sync ➔ Backend ➔ Caregiver
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400">
+        Architecture hero: Local-first persistence guarantees uninterrupted patient operation.
+      </div>
+    </div>
+
+    <!-- SLIDE 9: WHY MANOMITRA / DIFFERENTIATION -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-9">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">09 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">BUILT FOR INDIA'S REALITY</h2>
+          <p class="text-stone-600 text-sm mt-1">Designed for challenging rural, multilingual, and low-connectivity environments.</p>
+        </div>
+
+        <!-- 5 Visual Pillars -->
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 text-center">
+          <div class="p-5 rounded-xl bg-beige-50 border border-beige-300">
+            <div class="text-3xl">🗣️</div>
+            <div class="font-bold text-forest-700 text-sm mt-3">LANGUAGE</div>
+            <div class="font-bold text-stone-900 text-xs mt-1">Vernacular-first</div>
+            <div class="text-[11px] text-stone-600 mt-2">Speech synthesis & UI supporting diverse Indian languages.</div>
+          </div>
+
+          <div class="p-5 rounded-xl bg-beige-50 border border-beige-300">
+            <div class="text-3xl">👆</div>
+            <div class="font-bold text-forest-700 text-sm mt-3">ACCESSIBILITY</div>
+            <div class="font-bold text-stone-900 text-xs mt-1">Elder-friendly</div>
+            <div class="text-[11px] text-stone-600 mt-2">56px+ tactile buttons for trembling hands; high-contrast palette.</div>
+          </div>
+
+          <div class="p-5 rounded-xl bg-beige-50 border border-beige-300">
+            <div class="text-3xl">⚡</div>
+            <div class="font-bold text-forest-700 text-sm mt-3">CONNECTIVITY</div>
+            <div class="font-bold text-stone-900 text-xs mt-1">Offline-first</div>
+            <div class="text-[11px] text-stone-600 mt-2">100% playable during power cuts & blackouts via IndexedDB.</div>
+          </div>
+
+          <div class="p-5 rounded-xl bg-beige-50 border border-beige-300">
+            <div class="text-3xl">🌾</div>
+            <div class="font-bold text-forest-700 text-sm mt-3">CULTURE</div>
+            <div class="font-bold text-stone-900 text-xs mt-1">Familiar content</div>
+            <div class="text-[11px] text-stone-600 mt-2">Indian bazaars & daily routines replace abstract tests.</div>
+          </div>
+
+          <div class="p-5 rounded-xl bg-beige-50 border border-burgundy-700/30">
+            <div class="text-3xl">👨‍👩‍👧</div>
+            <div class="font-bold text-burgundy-700 text-sm mt-3">CAREGIVING</div>
+            <div class="font-bold text-stone-900 text-xs mt-1">Closed-loop care</div>
+            <div class="text-[11px] text-stone-600 mt-2">WhatsApp alerts provide family peace of mind without surveillance.</div>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-forest-50 border border-forest-600/30 text-center font-bold text-forest-700 text-xs sm:text-sm">
+          "Designed for challenging rural, multilingual, and low-connectivity environments across India."
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400">
+        Inclusivity engineered into the architecture from day one.
+      </div>
+    </div>
+
+    <!-- SLIDE 10: VALIDATION + ROADMAP + CLOSE -->
+    <div class="slide-card absolute inset-0 m-auto max-w-6xl w-full h-full max-h-[800px] bg-white border border-beige-300 rounded-2xl p-8 sm:p-12 flex flex-col justify-between shadow-xl transition-all duration-300 hidden" id="slide-10">
+      <div class="flex items-center justify-between border-b border-beige-200 pb-3">
+        <span class="text-xs font-mono uppercase tracking-widest text-forest-700 font-bold">MANOMITRA</span>
+        <span class="text-xs font-mono text-stone-400">10 / 10</span>
+      </div>
+
+      <div class="my-auto space-y-6">
+        <div>
+          <h2 class="text-3xl font-extrabold text-forest-700">FROM PROTOTYPE TO IMPACT</h2>
+          <p class="text-stone-600 text-sm mt-1">A structured roadmap from working prototype to community impact.</p>
+        </div>
+
+        <!-- Roadmap + What We Will Measure -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Roadmap (2 cols) -->
+          <div class="lg:col-span-2 p-5 rounded-xl bg-beige-50 border border-beige-300 text-xs">
+            <div class="font-bold text-forest-700 text-xs font-mono uppercase mb-3">PHASED ROADMAP</div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+                <div class="font-bold text-forest-700">NOW</div>
+                <div class="font-semibold text-stone-900 mt-1">Working Prototype</div>
+                <div class="text-[10px] text-stone-500 mt-1">5 games, PWA, WhatsApp bot</div>
+              </div>
+              <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+                <div class="font-bold text-forest-700">NEXT</div>
+                <div class="font-semibold text-stone-900 mt-1">Cohort Pilot</div>
+                <div class="text-[10px] text-stone-500 mt-1">Seniors + caregivers</div>
+              </div>
+              <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+                <div class="font-bold text-forest-700">VALIDATE</div>
+                <div class="font-semibold text-stone-900 mt-1">Evidence Analysis</div>
+                <div class="text-[10px] text-stone-500 mt-1">Usability & adherence</div>
+              </div>
+              <div class="p-3 rounded-lg bg-white border border-beige-300 shadow-sm">
+                <div class="font-bold text-burgundy-700">SCALE</div>
+                <div class="font-semibold text-stone-900 mt-1">Public Integration</div>
+                <div class="text-[10px] text-stone-500 mt-1">More languages & clinics</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- What We Will Measure -->
+          <div class="p-5 rounded-xl bg-beige-50 border border-beige-300 text-xs">
+            <div class="font-bold text-forest-700 text-xs font-mono uppercase mb-2">WHAT WE WILL MEASURE (PILOT)</div>
+            <ul class="text-stone-700 space-y-1.5">
+              <li>• Usability & navigation friction</li>
+              <li>• 14-day routine adherence rate</li>
+              <li>• Touch error rates in seniors</li>
+              <li>• Caregiver notification usefulness</li>
+              <li>• Reaction latency stability</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Strong Closing Block -->
+        <div class="p-6 rounded-2xl bg-forest-50 border-2 border-forest-700 text-center space-y-2">
+          <div class="text-3xl sm:text-4xl font-extrabold text-forest-700">MANOMITRA</div>
+          <div class="text-base font-bold text-burgundy-700">"Your Companion for a Healthier Mind."</div>
+          <div class="text-xs font-mono font-bold text-forest-700 tracking-wider pt-1">
+            PLAY • MEASURE • ADAPT • TRACK • SUPPORT
+          </div>
+          <div class="text-sm italic text-stone-700 pt-1">
+            "Care should not depend on memory, language, or connectivity."
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-beige-200 pt-3 text-xs text-stone-400 text-center">
+        Thank you for your time. Questions & Discussion.
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER SHORTCUTS -->
+  <footer class="no-print h-12 border-t border-beige-300 bg-white px-6 flex items-center justify-between text-xs text-stone-500 z-30">
+    <div class="flex items-center space-x-4">
+      <span class="hidden sm:inline">Use <kbd class="px-1.5 py-0.5 bg-beige-100 border border-beige-300 rounded text-[10px] text-stone-700">←</kbd> <kbd class="px-1.5 py-0.5 bg-beige-100 border border-beige-300 rounded text-[10px] text-stone-700">→</kbd> to navigate</span>
+      <span class="hidden md:inline">Press <kbd class="px-1.5 py-0.5 bg-beige-100 border border-beige-300 rounded text-[10px] text-stone-700">N</kbd> for Script</span>
+      <span class="hidden md:inline">Press <kbd class="px-1.5 py-0.5 bg-beige-100 border border-beige-300 rounded text-[10px] text-stone-700">F</kbd> for Fullscreen</span>
+    </div>
+
+    <!-- Progress Line -->
+    <div class="w-48 bg-beige-200 h-1.5 rounded-full overflow-hidden">
+      <div class="bg-forest-700 h-full transition-all duration-300" id="progress-bar" style="width: 10%;"></div>
+    </div>
+  </footer>
+
+  <!-- SPEAKER NOTES DRAWER -->
+  <div id="notes-drawer" class="no-print fixed bottom-14 right-6 w-96 max-w-[90vw] bg-white border border-forest-600/40 rounded-xl p-4 shadow-2xl z-40 hidden backdrop-blur">
+    <div class="flex items-center justify-between pb-2 border-b border-beige-200 mb-2">
+      <div class="flex items-center space-x-1.5 text-forest-700 font-mono text-xs font-bold">
+        <span>🎤</span>
+        <span>VERBATIM SPEAKER SCRIPT (~15-20s)</span>
+      </div>
+      <button onclick="toggleNotes()" class="text-stone-400 hover:text-stone-800 text-sm">✕</button>
+    </div>
+    <p id="notes-text" class="text-xs text-stone-700 leading-relaxed font-sans">
+      "Judges, over eight million elderly Indians are quietly navigating cognitive decline today. Meet MANOMITRA—an AI-assisted cognitive engagement and caregiver support platform designed to connect senior daily play directly with caregiver peace of mind."
+    </p>
+  </div>
+
+  <script>
+    const totalSlides = 10;
+    let currentSlide = 1;
+
+    const scripts = {
+      1: `"Judges, over eight million elderly Indians are quietly navigating cognitive decline today. Meet MANOMITRA—an AI-assisted cognitive engagement and caregiver support platform designed to connect senior daily play directly with caregiver peace of mind."`,
+      2: `"In India, 7.4% of seniors experience cognitive decline. When memory loss begins, it creates a cascade: routine breakdown leads to caregiver uncertainty, resulting in delayed medical attention. The problem affects both the senior and the entire caregiving ecosystem."`,
+      3: `"Existing alternatives either focus exclusively on cognitive puzzles without family visibility, or on administrative caregiver alarms with zero patient joy. MANOMITRA closes this gap by providing an offline-capable, culturally grounded loop connecting daily play to caregiver support."`,
+      4: `"The MANOMITRA Care Loop is the product. Seniors play culturally familiar mini-games. The engine measures reaction time and errors, adapts difficulty, tracks 7-day stability trends, and keeps the caregiver informed through WhatsApp."`,
+      5: `"The system operates in three clear lanes: Senior, Engine, and Caregiver. Most importantly, the offline flow guarantees uninterrupted operation. When connectivity drops, games and routines save to IndexedDB and automatically sync when reconnected."`,
+      6: `"This is a working prototype. We have built 5 cognitive games, an offline-capable PWA, an adaptive difficulty engine, and a live WhatsApp companion. We clearly distinguish between what is working today and our planned future integrations."`,
+      7: `"We show exactly where AI fits: user performance enters, the adaptive engine adjusts difficulty, and longitudinal trends generate caregiver signals. Gemini is strictly context-grounded. We state clearly: this is an engagement and monitoring tool, not a diagnostic system."`,
+      8: `"Our system architecture is edge-first. The patient PWA writes to local IndexedDB. The app functions completely without internet, and syncs to the Node.js API and FastAPI ML microservices when connection resumes, delivering insights to the caregiver dashboard and WhatsApp."`,
+      9: `"MANOMITRA is differentiated across five fundamental pillars: language, accessibility, offline connectivity, cultural familiarity, and closed-loop caregiving. It is designed from line one for India's diverse, low-connectivity realities."`,
+      10: `"Our roadmap is disciplined: from working prototype to user pilot, validation, and scale. Cognitive care should not depend on memory, language, or connectivity. MANOMITRA makes care continuous, accessible, and human. Thank you."`
+    };
+
+    function updateSlide() {
+      for (let i = 1; i <= totalSlides; i++) {
+        const slide = document.getElementById(`slide-${i}`);
+        if (slide) {
+          if (i === currentSlide) {
+            slide.classList.remove('hidden');
+          } else {
+            slide.classList.add('hidden');
+          }
+        }
+      }
+
+      document.getElementById('slide-indicator').innerText = `${String(currentSlide).padStart(2, '0')} / ${totalSlides}`;
+      const progressPercent = (currentSlide / totalSlides) * 100;
+      document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+      document.getElementById('notes-text').innerText = scripts[currentSlide] || '';
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function toggleNotes() {
+      const drawer = document.getElementById('notes-drawer');
+      drawer.classList.toggle('hidden');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        toggleNotes();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>

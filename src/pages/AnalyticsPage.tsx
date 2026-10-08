@@ -75,7 +75,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ onNavigate }) => {
             icon={BarChart3}
             badgeText="NO RECORDINGS"
             title="Complete a session to see your performance analytics."
-            description="SANJEEVANI calculates cadence accuracy, compliance in the 100–120 CPM window, hand tilt, and motion consistency dynamically from your recorded runs."
+            description="PULSEMATE calculates cadence accuracy, compliance in the 100–120 CPM window, hand tilt, and motion consistency dynamically from your recorded runs."
             actionLabel="Open Live Monitor"
             onAction={() => onNavigate('/live')}
             secondaryActionLabel="Session History"
@@ -286,7 +286,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ onNavigate }) => {
       {/* 4 Human-Readable Measurement Sections (Phase 1 Baseline Kept) */}
       <div className="mb-6">
         <h3 className="font-mono text-xs font-semibold tracking-wider text-content-secondary uppercase mb-4">
-          WHAT SANJEEVANI MEASURES
+          WHAT PULSEMATE MEASURES
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

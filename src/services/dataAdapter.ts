@@ -7,7 +7,7 @@ export type { DataAdapter, ConnectionStatus, AdapterMode };
 type ModeListener = (mode: AdapterMode, adapter: DataAdapter) => void;
 const modeListeners: Set<ModeListener> = new Set();
 
-const STORAGE_MODE_KEY = 'sanjeevani_adapter_mode';
+const STORAGE_MODE_KEY = 'pulsemate_adapter_mode';
 
 function getInitialMode(): AdapterMode {
   if (typeof window !== 'undefined') {

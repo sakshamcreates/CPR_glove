@@ -42,7 +42,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
 
               {/* Supporting Copy */}
               <p className="text-base sm:text-lg text-content-secondary leading-relaxed max-w-xl">
-                SANJEEVANI is a smart CPR feedback glove designed to help users practice rhythm, hand positioning and consistency with immediate feedback.
+                PULSEMATE is a smart CPR feedback glove designed to help users practice rhythm, hand positioning and consistency with immediate feedback.
               </p>
 
               {/* CTA Buttons */}
@@ -72,7 +72,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                 <div className="p-4 rounded-lg bg-canvas-secondary/70 border border-border max-w-md">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-mono text-xs font-semibold uppercase tracking-wider text-content-primary">
-                      SANJEEVANI SYSTEM
+                      PULSEMATE SYSTEM
                     </span>
                     <StatusIndicator status="OFFLINE" label="DEVICE OFFLINE" size="sm" />
                   </div>
@@ -289,7 +289,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               Designed as a motion-based CPR feedback prototype.
             </h3>
             <p className="text-sm text-content-secondary leading-relaxed">
-              SANJEEVANI uses motion sensing to provide feedback on CPR rhythm and positioning. It is not intended to replace certified CPR training, clinical equipment, or medical-grade measurement.
+              PULSEMATE uses motion sensing to provide feedback on CPR rhythm and positioning. It is not intended to replace certified CPR training, clinical equipment, or medical-grade measurement.
             </p>
           </div>
         </div>

@@ -65,7 +65,7 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
     <PageContainer
       eyebrow="LIVE FEEDBACK"
       title="Live CPR Monitor"
-      subtitle="Real-time telemetry stream from the SANJEEVANI motion system."
+      subtitle="Real-time telemetry stream from the PULSEMATE motion system."
       actions={
         <div className="flex flex-wrap items-center gap-3">
           {/* Stream Mode Switcher (Demo vs Live ESP32) */}
@@ -98,7 +98,7 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
           {/* Connection Status Badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-canvas-secondary border border-border">
             <span className="font-mono text-xs text-content-secondary">DEVICE:</span>
-            <span className="font-mono text-xs font-semibold text-content-primary">SANJEEVANI-01</span>
+            <span className="font-mono text-xs font-semibold text-content-primary">PULSEMATE-01</span>
             <span className="text-border">|</span>
             {isLiveEsp32 ? (
               <StatusIndicator status={connectionStatus} size="sm" />

@@ -8,7 +8,7 @@ export const AboutPage: React.FC = () => {
   return (
     <PageContainer
       eyebrow="ABOUT"
-      title="About SANJEEVANI"
+      title="About PULSEMATE"
       subtitle="The motivation and design behind the motion-assisted CPR feedback glove."
     >
       <div className="space-y-12">
@@ -16,10 +16,10 @@ export const AboutPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-4">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-content-primary">
-              What is SANJEEVANI?
+              What is PULSEMATE?
             </h2>
             <p className="text-sm sm:text-base text-content-secondary leading-relaxed">
-              SANJEEVANI is a smart wearable CPR feedback glove designed to help users practice rhythm, hand positioning, and consistency with immediate feedback.
+              PULSEMATE is a smart wearable CPR feedback glove designed to help users practice rhythm, hand positioning, and consistency with immediate feedback.
             </p>
             <h3 className="text-base font-bold text-content-primary pt-2">
               Why does it exist?
@@ -28,7 +28,7 @@ export const AboutPage: React.FC = () => {
               During CPR practice, trainees often struggle with two critical factors: <strong>cadence drift</strong> (compressing too fast or slowing down due to fatigue) and <strong>hand tilt</strong> (compressing at an off-axis angle rather than straight downward).
             </p>
             <p className="text-sm text-content-secondary leading-relaxed">
-              By combining motion sensing with synchronized visual, audio, and vibration feedback, SANJEEVANI gives rescuers instant feedback right on their hand.
+              By combining motion sensing with synchronized visual, audio, and vibration feedback, PULSEMATE gives rescuers instant feedback right on their hand.
             </p>
           </div>
 
@@ -114,7 +114,7 @@ export const AboutPage: React.FC = () => {
               Prototype Notice
             </h3>
             <p className="text-sm text-content-secondary leading-relaxed">
-              SANJEEVANI is a motion-based CPR feedback prototype designed for practice and simulated training. It is not intended to replace certified CPR training, clinical equipment, or medical-grade measurement.
+              PULSEMATE is a motion-based CPR feedback prototype designed for practice and simulated training. It is not intended to replace certified CPR training, clinical equipment, or medical-grade measurement.
             </p>
           </div>
         </div>

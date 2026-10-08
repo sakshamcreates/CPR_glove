@@ -1,6 +1,6 @@
 import { CPRSession } from '../types/cpr';
 
-const STORAGE_KEY = 'sanjeevani_cpr_sessions';
+const STORAGE_KEY = 'pulsemate_cpr_sessions';
 
 export const sessionStorage = {
   getSessions(): CPRSession[] {

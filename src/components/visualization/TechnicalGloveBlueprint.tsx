@@ -8,7 +8,7 @@ export const TechnicalGloveBlueprint: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-sm bg-brand-green" />
           <span className="font-mono text-xs font-semibold tracking-wider text-content-primary uppercase">
-            SANJEEVANI GLOVE
+            PULSEMATE GLOVE
           </span>
         </div>
         <div className="font-mono text-[11px] text-content-secondary">

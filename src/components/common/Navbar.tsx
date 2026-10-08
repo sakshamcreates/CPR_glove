@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
             </div>
             <div className="flex flex-col">
               <span className="font-semibold tracking-tight text-content-primary text-sm leading-tight group-hover:text-brand-green transition-colors">
-                SANJEEVANI
+                PULSEMATE
               </span>
               <span className="text-[10px] text-content-secondary tracking-normal font-mono hidden sm:inline">
                 A TOUCH TO REVIVE
