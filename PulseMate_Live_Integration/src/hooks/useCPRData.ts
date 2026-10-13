@@ -119,10 +119,26 @@ export function useCPRData() {
     setGlobalAdapterMode(newMode);
   }, []);
 
+  const [wsUrl, setWsUrlState] = useState<string>(() => {
+    const adapter = getDataAdapter();
+    return adapter.getWsUrl ? adapter.getWsUrl() : '';
+  });
+
+  const setCustomWsUrl = useCallback((url: string) => {
+    const adapter = getDataAdapter();
+    if (adapter.setCustomWsUrl) {
+      adapter.setCustomWsUrl(url);
+      setWsUrlState(adapter.getWsUrl ? adapter.getWsUrl() : url);
+    }
+  }, []);
+
   const reconnect = useCallback(() => {
     const adapter = getDataAdapter();
     adapter.disconnect();
     adapter.connect();
+    if (adapter.getWsUrl) {
+      setWsUrlState(adapter.getWsUrl());
+    }
   }, []);
 
   return {
@@ -138,5 +154,7 @@ export function useCPRData() {
     resume,
     reset,
     reconnect,
+    wsUrl,
+    setCustomWsUrl,
   };
 }

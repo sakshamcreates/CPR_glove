@@ -162,6 +162,8 @@ export interface DataAdapter {
   isPaused?(): boolean;
   getError?(): string | null;
   getHelloInfo?(): ESP32HelloMessage | null;
+  getWsUrl?(): string;
+  setCustomWsUrl?(url: string): void;
   onStatusChange?(callback: (status: ConnectionStatus) => void): () => void;
   onError?(callback: (error: string | null) => void): () => void;
 }

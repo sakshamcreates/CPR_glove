@@ -41,9 +41,13 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
     reset,
     error,
     reconnect,
+    wsUrl,
+    setCustomWsUrl,
   } = useCPRData();
   const { isRecording, sessionDuration, startSession, stopSession } = useSession();
   const [completedSession, setCompletedSession] = useState<CPRSession | null>(null);
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [inputUrl, setInputUrl] = useState('');
 
   const isLiveEsp32 = adapterMode === 'esp32';
   const isConnected = connectionStatus === 'CONNECTED';
@@ -245,48 +249,125 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
 
       {/* Stream Signal Banner (Contextual based on Demo vs Live Mode) */}
       {isLiveEsp32 ? (
-        <div className={`mb-6 p-3 rounded-lg border flex flex-wrap items-center justify-between gap-2 text-xs font-mono transition-colors ${
+        <div className={`mb-6 p-3 rounded-lg border flex flex-col gap-2 text-xs font-mono transition-colors ${
           isConnected
             ? 'bg-emerald-50/80 border-status-success/30 text-content-primary'
             : isReconnecting
             ? 'bg-amber-50/80 border-status-warning/40 text-content-primary'
             : 'bg-canvas-secondary border-border text-content-secondary'
         }`}>
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <div className="flex items-center gap-2">
-              {isConnected ? (
-                <Wifi className="w-4 h-4 text-status-success shrink-0" />
-              ) : (
-                <WifiOff className="w-4 h-4 text-content-muted shrink-0" />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-center gap-2">
+                {isConnected ? (
+                  <Wifi className="w-4 h-4 text-status-success shrink-0" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-content-muted shrink-0" />
+                )}
+                <span className="font-semibold uppercase tracking-wide">
+                  {isConnected ? 'ESP32-S3 LIVE STREAM CONNECTED:' : isReconnecting ? 'CONNECTING TO ESP32:' : 'ESP32 STANDBY:'}
+                </span>
+                <span>
+                  {isConnected
+                    ? `Seq #${data?.sampleSeq ?? 0} · Sensor: ${
+                        sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
+                      } · Session: ${sessionState.toUpperCase()}`
+                    : isReconnecting
+                    ? `Connecting to ${wsUrl || 'configured endpoint'}...`
+                    : error
+                    ? `${error}`
+                    : `Disconnected from ${wsUrl || 'ESP32'}.`}
+                </span>
+              </div>
+              {isConnected && (
+                <span className={`text-[11px] pl-6 ${msSinceLast !== null && msSinceLast > 3000 ? 'text-status-warning font-semibold' : 'text-content-muted'}`}>
+                  {msSinceLast !== null
+                    ? msSinceLast > 3000
+                      ? `⚠ Stale telemetry — last update ${(msSinceLast / 1000).toFixed(1)}s ago`
+                      : `Last update: ${msSinceLast < 1000 ? `${msSinceLast}ms` : `${(msSinceLast / 1000).toFixed(1)}s`} ago`
+                    : 'Waiting for first packet…'}
+                </span>
               )}
-              <span className="font-semibold uppercase tracking-wide">
-                {isConnected ? 'ESP32-S3 LIVE STREAM CONNECTED:' : isReconnecting ? 'CONNECTING TO ESP32:' : 'ESP32 STANDBY:'}
-              </span>
-              <span>
-                {isConnected
-                  ? `Seq #${data?.sampleSeq ?? 0} · Sensor: ${
-                      sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
-                    } · Session: ${sessionState.toUpperCase()}`
-                  : isReconnecting
-                  ? 'Attempting connection to VITE_ESP32_WS_URL. Confirm ESP32 and this computer are on the same network.'
-                  : error
-                  ? `WebSocket error: ${error}`
-                  : 'No WebSocket connection. Check VITE_ESP32_WS_URL in .env.local, then restart the dev server.'}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="font-semibold text-brand-green">
+                {isRecording ? `● RECORDING (${formatTime(sessionDuration)})` : 'READY TO RECORD'}
               </span>
             </div>
-            {isConnected && (
-              <span className={`text-[11px] pl-6 ${msSinceLast !== null && msSinceLast > 3000 ? 'text-status-warning font-semibold' : 'text-content-muted'}`}>
-                {msSinceLast !== null
-                  ? msSinceLast > 3000
-                    ? `⚠ Stale telemetry — last update ${(msSinceLast / 1000).toFixed(1)}s ago`
-                    : `Last update: ${msSinceLast < 1000 ? `${msSinceLast}ms` : `${(msSinceLast / 1000).toFixed(1)}s`} ago`
-                  : 'Waiting for first packet…'}
-              </span>
-            )}
           </div>
-          <span className="font-semibold text-brand-green shrink-0">
-            {isRecording ? `● RECORDING (${formatTime(sessionDuration)})` : 'READY TO RECORD'}
-          </span>
+
+          {/* Endpoint display & Quick switch control */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50 text-[11px]">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-content-muted">ACTIVE ENDPOINT:</span>
+              <span className="font-semibold text-content-primary px-1.5 py-0.5 rounded bg-white border border-border">
+                {wsUrl}
+              </span>
+              {!editingUrl ? (
+                <button
+                  onClick={() => {
+                    setInputUrl(wsUrl);
+                    setEditingUrl(true);
+                  }}
+                  className="text-brand-green hover:underline font-semibold"
+                >
+                  Change Endpoint
+                </button>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={inputUrl}
+                    onChange={(e) => setInputUrl(e.target.value)}
+                    placeholder="wss://localhost:3001 or ws://<IP>:81"
+                    className="px-2 py-0.5 rounded border border-border text-[11px] font-mono w-56 bg-white"
+                  />
+                  <button
+                    onClick={() => {
+                      setCustomWsUrl(inputUrl);
+                      setEditingUrl(false);
+                    }}
+                    className="px-2 py-0.5 rounded bg-brand-green text-white font-semibold"
+                  >
+                    Save & Connect
+                  </button>
+                  <button
+                    onClick={() => setEditingUrl(false)}
+                    className="px-2 py-0.5 rounded text-content-muted hover:text-content-primary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-content-muted">Presets:</span>
+              <button
+                onClick={() => setCustomWsUrl('wss://localhost:3001')}
+                className={`px-1.5 py-0.5 rounded border text-[10px] ${
+                  wsUrl === 'wss://localhost:3001'
+                    ? 'bg-brand-green text-white border-brand-green'
+                    : 'bg-white border-border hover:bg-canvas-primary'
+                }`}
+                title="Secure bridge on this laptop for deployed HTTPS Vercel"
+              >
+                Local Bridge (wss://)
+              </button>
+              <button
+                onClick={() => setCustomWsUrl('ws://10.197.64.142:81')}
+                className={`px-1.5 py-0.5 rounded border text-[10px] ${
+                  wsUrl.includes(':81')
+                    ? 'bg-brand-green text-white border-brand-green'
+                    : 'bg-white border-border hover:bg-canvas-primary'
+                }`}
+                title="Direct ESP32 WebSocket (only works when accessing over HTTP or local bridge)"
+              >
+                Direct ESP32 (ws://)
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="mb-6 p-3 rounded-lg bg-canvas-secondary border border-border flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-content-secondary">

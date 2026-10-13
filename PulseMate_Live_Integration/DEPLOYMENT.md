@@ -1,161 +1,86 @@
-# PulseMate — Deployment & Configuration Guide
+# PulseMate — Deployed Website (Vercel) + ESP32 Live Telemetry Guide
 
-## Quick Start (Local Development)
+This guide explains how to connect your deployed Vercel site (`https://cprglove.vercel.app/`) to your real ESP32-S3 hardware when your laptop and ESP32 are connected to the same Wi-Fi/hotspot.
+
+---
+
+## 1. Browser Security Reality: Why Direct `ws://` is Blocked on Deployed Sites
+
+When you open `https://cprglove.vercel.app/` in Chrome, Edge, or Firefox:
+* The web page is loaded over **HTTPS** (secure context).
+* The ESP32 WebSocket server runs plain **`ws://<ESP32_IP>:81`** (insecure, no TLS encryption).
+* **Browser Mixed Content Policy strictly blocks** `new WebSocket("ws://10.197.64.142:81")` from any HTTPS page:
+  ```text
+  Mixed Content: The page at 'https://cprglove.vercel.app/' was loaded over HTTPS,
+  but attempted to connect to the insecure WebSocket endpoint 'ws://10.197.64.142:81'.
+  This request has been blocked.
+  ```
+* **Being on the same Wi-Fi does NOT bypass this security restriction.** The restriction is enforced inside your web browser sandbox, not by the router or network.
+
+---
+
+## 2. The Solution: Lightweight Local WSS Bridge
+
+To satisfy browser HTTPS security without running any heavy frontend dev servers (`npm run dev` is **NOT** needed), a tiny background bridge (`server/bridge.js`) runs on your laptop:
+
+```text
+[ESP32-S3] ──(ws://10.197.64.142:81 over Wi-Fi)──> [Laptop Bridge] ──(wss://localhost:3001)──> [Vercel Browser Tab]
+```
+
+### Why this satisfies all requirements:
+1. **No frontend server needed**: Vercel serves the static HTML/JS/CSS.
+2. **No internet proxy/relay needed**: Telemetry never leaves your local Wi-Fi.
+3. **Pure native Node.js**: Zero external npm dependencies.
+4. **Dynamic IP configuration**: If the ESP32 IP changes, you can pass it via `ESP32_WS_URL=ws://<NEW_IP>:81` or change it on the website UI.
+
+---
+
+## 3. How to Use the Deployed Website (`https://cprglove.vercel.app/`)
+
+### Step 1: Start the Local Bridge on your Laptop
+Open PowerShell in the project directory and run:
 
 ```powershell
-# 1. Set your ESP32's current IP in .env.local
-#    (find it from the Arduino Serial Monitor "Wi-Fi connected. IP=X.X.X.X" line)
-
-# 2. Edit .env.local:
-VITE_ESP32_WS_URL=ws://10.197.64.142:81
-
-# 3. Start the dev server (MUST restart after editing .env.local)
-npm.cmd run dev
-
-# 4. Open http://localhost:5173 — the dashboard auto-connects in Real ESP32 Mode
+npm.cmd run bridge
 ```
 
-> **Important:** After editing `.env.local`, you **must restart** the Vite dev server
-> (`Ctrl+C`, then `npm.cmd run dev`). Vite embeds env vars at build/transform time, not at runtime.
+*(If the ESP32 IP changed, pass the new IP: `$env:ESP32_WS_URL="ws://<NEW_IP>:81"; npm.cmd run bridge`)*
+
+The bridge will automatically generate a self-signed TLS cert for `localhost` and begin listening on `wss://localhost:3001`.
+
+### Step 2: One-Time Certificate Trust in Browser (Takes 5 seconds)
+Because the bridge uses a local self-signed TLS certificate for `wss://localhost:3001`, your browser requires you to accept it once:
+1. Open this link in your browser: **[https://localhost:3001](https://localhost:3001)**
+2. Chrome / Edge will show: *"Your connection isn't private"*
+3. Click **"Advanced"** → **"Proceed to localhost (unsafe)"**
+4. You will see the green confirmation page: **"Certificate Accepted! Secure Bridge is active."**
+
+### Step 3: Open the Deployed Website
+1. Go to **[https://cprglove.vercel.app/live](https://cprglove.vercel.app/live)**
+2. The page connects to `wss://localhost:3001` automatically and begins streaming real ESP32 telemetry!
+3. You will see:
+   * **ESP32-S3 LIVE STREAM CONNECTED**
+   * Real **`Seq #`** ticking upward
+   * Active Hand Tilt, Accelerations, and CPR Cadence
 
 ---
 
-## Environment Variable
+## 4. UI Custom Endpoint & URL Parameter Override
 
-| Variable | Purpose | Example |
-|---|---|---|
-| `VITE_ESP32_WS_URL` | WebSocket URL of the ESP32 firmware server | `ws://10.197.64.142:81` |
-
-The IP changes whenever the ESP32 reconnects to a hotspot. Find the new IP from the serial
-monitor line: `[NET] Wi-Fi connected. IP=<NEW_IP>`.
-
-`.env.local` is **git-ignored** and must never be committed. Your hotspot credentials or device
-IP are private and should stay local.
+The deployed frontend now includes an **Endpoint Switcher** on the Live Monitor page:
+* Click **"Change Endpoint"** in the top banner to connect to any WebSocket address without rebuilding or redeploying.
+* Quick preset buttons:
+  * **Local Bridge (wss://)**: `wss://localhost:3001` (for deployed HTTPS)
+  * **Direct ESP32 (ws://)**: `ws://10.197.64.142:81` (for local HTTP access)
+* You can also bookmark the URL with a query parameter:
+  `https://cprglove.vercel.app/live?wsUrl=wss://localhost:3001`
 
 ---
 
-## Operating Modes
+## 5. Summary of Running Processes
 
-### Demo Mode
-- Uses the built-in physics simulator — no hardware required.
-- All metrics are clearly labelled **DEMO**.
-- No WebSocket connections are opened while Demo Mode is active.
-- Select via the **DEMO MODE** button on Dashboard or Live Monitor.
-
-### Real ESP32 Mode (default)
-- Connects directly to `VITE_ESP32_WS_URL` over a plain WebSocket (`ws://`).
-- Shows **REAL HARDWARE / LIVE ESP32** labels everywhere.
-- Shows `Connecting → Connected / Error` states.
-- Automatically reconnects after drops (exponential backoff, capped at 8 s).
-- Never falls back to demo data while this mode is active.
-- Select via the **LIVE ESP32** button.
-
----
-
-## Is `npm run server` Required?
-
-**No — for direct ESP32 connection, the gateway is not needed.**
-
-`npm run server` starts the optional Node.js gateway (`server/gateway.js`) on port 3001.
-It was part of an older indirect architecture. It is only useful if you want to relay data
-through a local Node server (e.g., for logging, or running the built-in simulator
-`npm run test:esp32`).
-
-For real hardware, leave the gateway off. The frontend connects directly to the ESP32.
-
----
-
-## Public / HTTPS Deployment Limitations
-
-| Scenario | Works? | Reason |
-|---|---|---|
-| Same local network, `http://localhost` | ✅ Yes | Plain `ws://` allowed from non-HTTPS pages |
-| Same local network, `http://192.168.x.x` | ✅ Yes | Plain `ws://` allowed |
-| Deployed to **HTTPS** (Netlify, Vercel, GitHub Pages…) | ❌ No | Browsers block **mixed content**: loading `ws://` from an `https://` page is forbidden |
-| Deployed to HTTPS, ESP32 on **public internet** | ❌ Not practical | The ESP32 has a private LAN IP not reachable from the internet |
-
-### Why `ws://` fails on HTTPS
-
-Modern browsers enforce **mixed content security**: an HTTPS page cannot open an insecure
-`ws://` WebSocket. Attempting it results in a browser error:
-
-```
-Mixed Content: The page at 'https://yoursite.com' was loaded over HTTPS, but attempted
-to connect to the insecure WebSocket endpoint 'ws://192.168.x.x:81'.
-This request has been blocked.
-```
-
-### If you need public HTTPS + real hardware
-
-You need a **secure WebSocket proxy** that:
-
-1. Terminates TLS (`wss://`) on a public server you control.
-2. Forwards the WebSocket traffic to the ESP32 on your local network via a
-   reverse-tunnel (e.g., [ngrok](https://ngrok.com), [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/),
-   or your own VPS with nginx).
-
-Architecture:
-```
-Browser (HTTPS)
-  └─ wss://your-server.com/esp32  (TLS terminated by public server)
-       └─ [reverse tunnel / proxy]
-            └─ ws://192.168.x.x:81  (ESP32 on your LAN)
-```
-
-Update `.env.local` on the build machine (or set the env var in your deployment platform)
-to point at the secure proxy URL:
-
-```env
-VITE_ESP32_WS_URL=wss://your-server.com/esp32
-```
-
-**The dashboard itself does not require any code changes** — it reads the URL from
-`VITE_ESP32_WS_URL`.
-
-### Demo Mode on a public HTTPS site
-
-Demo Mode always works on any HTTPS deployment because it uses the built-in simulator
-with no WebSocket connections. The public site should default to Demo Mode, or clearly
-tell users that Real ESP32 Mode requires a local network connection.
-
----
-
-## How to Verify Live Hardware Is Updating the UI
-
-1. Open the Arduino Serial Monitor. Confirm the device shows:
-   ```
-   [WS] client #0 connected from <your-laptop-IP> (clients=1)
-   ```
-   This confirms the laptop's browser opened the WebSocket and the firmware counted it.
-
-2. In the browser, the Live Monitor banner must show:
-   ```
-   ● ESP32-S3 LIVE STREAM CONNECTED: Seq #NNNNN · Sensor: MPU6050 OK · Session: STANDBY
-   Last update: Xs ago
-   ```
-
-3. The sequence number (`Seq #`) must **increase with every packet**. If it stays at 0,
-   data is not arriving.
-
-4. When you physically tilt the glove, `HAND TILT` must respond within ~100 ms.
-
-5. When compressions begin, `CPR RATE` changes from `—` to a number (e.g. `112 /min`).
-
----
-
-## Files Affected by This Integration
-
-| File | Role |
-|---|---|
-| `.env.local` | ESP32 WebSocket URL — **edit this when the IP changes** |
-| `src/services/esp32Adapter.ts` | WebSocket lifecycle, reconnect, telemetry state |
-| `src/services/telemetryValidator.ts` | Parses & validates firmware JSON packets |
-| `src/services/dataAdapter.ts` | Singleton mode manager (demo ↔ esp32) |
-| `src/services/demoAdapter.ts` | Physics simulator for Demo Mode |
-| `src/hooks/useCPRData.ts` | React hook exposing live data to all pages |
-| `src/types/cpr.ts` | Type definitions for telemetry, adapter, session |
-| `src/pages/DashboardPage.tsx` | Overview with mode switcher, live metrics |
-| `src/pages/LiveMonitorPage.tsx` | Full HUD with rate, tilt, accel, freshness |
-| `src/pages/DevicePage.tsx` | Hardware spec, sensor status, hello info |
-| `src/pages/LandingPage.tsx` | Hero with live connection status |
-| `src/components/common/Navbar.tsx` | Persistent connection status indicator |
+| To Use | Run `npm run dev`? | Run `npm run server`? | Run `npm run bridge`? |
+|---|---|---|---|
+| **Demo Mode on Vercel** | ❌ No | ❌ No | ❌ No |
+| **Real ESP32 on Deployed Vercel (HTTPS)** | ❌ No | ❌ No | ✅ **Yes** (`npm run bridge`) |
+| **Local Development (HTTP)** | ✅ Yes (`npm run dev`) | ❌ No | ❌ No (connects direct to `ws://`) |

@@ -34,6 +34,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     isPaused,
     error,
     reconnect,
+    wsUrl,
   } = useCPRData();
   const { isRecording, sessionDuration, sessions } = useSession();
 
@@ -133,7 +134,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 ? 'ESP32-S3 LIVE STREAM CONNECTED:'
                 : isReconnecting
                 ? 'CONNECTING TO ESP32:'
-                : 'GATEWAY STANDBY:'}
+                : 'ESP32 STANDBY:'}
             </span>
             <span>
               {isConnected
@@ -141,10 +142,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
                   }, Session: ${sessionState.toUpperCase()}).`
                 : isReconnecting
-                ? 'Attempting connection to VITE_ESP32_WS_URL...'
+                ? `Attempting connection to ${wsUrl}...`
                 : error
-                ? `Connection error: ${error}`
-                : 'No WebSocket connection. Check VITE_ESP32_WS_URL.'}
+                ? `${error}`
+                : `No WebSocket connection (${wsUrl}). Click Open Live Monitor to configure.`}
             </span>
           </div>
           {(!isConnected || error) && (

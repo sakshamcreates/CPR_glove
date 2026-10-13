@@ -75,29 +75,46 @@ export class ESP32Adapter implements DataAdapter {
     }
   }
 
+  public setCustomWsUrl(url: string): void {
+    const trimmed = url.trim();
+    this.customWsUrl = trimmed || undefined;
+    if (typeof window !== 'undefined') {
+      if (trimmed) {
+        window.localStorage.setItem('pulsemate_ws_url', trimmed);
+      } else {
+        window.localStorage.removeItem('pulsemate_ws_url');
+      }
+    }
+    // Reconnect with the new URL if active
+    if (!this.isIntentionallyDisconnected) {
+      this.disconnect();
+      this.connect();
+    }
+  }
+
   public getWsUrl(): string {
     if (this.customWsUrl) return this.customWsUrl;
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const queryWs = urlParams.get('wsUrl');
-      if (queryWs) return queryWs;
+      if (queryWs) return queryWs.trim();
+
+      const savedWs = window.localStorage.getItem('pulsemate_ws_url');
+      if (savedWs) return savedWs.trim();
+
       const globalOverride = (window as unknown as Record<string, unknown>).__ESP32_WS_URL__;
-      if (typeof globalOverride === 'string' && globalOverride) return globalOverride;
+      if (typeof globalOverride === 'string' && globalOverride) return globalOverride.trim();
     }
+
     const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_ESP32_WS_URL : undefined;
-    if (!envUrl) {
-      // VITE_ESP32_WS_URL is not set — falling back to localhost:3001 (optional gateway).
-      // To connect to real ESP32 hardware, add VITE_ESP32_WS_URL=ws://<ESP32_IP>:81
-      // to .env.local and restart the dev server (npm run dev).
-      if (import.meta.env?.DEV) {
-        console.warn(
-          '[ESP32Adapter] VITE_ESP32_WS_URL is not set. Falling back to ws://localhost:3001.\n' +
-          'To connect to real hardware: add VITE_ESP32_WS_URL=ws://<ESP32_IP>:81 to .env.local, then restart Vite.'
-        );
-      }
-      return 'ws://localhost:3001';
+    if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+      return envUrl.trim();
     }
-    return envUrl;
+
+    // When running on HTTPS (like deployed Vercel), default to secure local bridge endpoint wss://localhost:3001
+    // On plain HTTP, default to standard local ESP32 IP
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    return isHttps ? 'wss://localhost:3001' : 'ws://10.197.64.142:81';
   }
 
   public async connect(): Promise<void> {
@@ -133,7 +150,13 @@ export class ESP32Adapter implements DataAdapter {
 
       socket.onerror = (err) => {
         if (this.ws !== socket) return;
-        const msg = `WebSocket error connecting to ${url}`;
+        const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        let msg = `WebSocket error connecting to ${url}`;
+        if (isHttpsPage && url.startsWith('ws://')) {
+          msg = `Mixed Content Block: Browser blocked insecure ws:// on HTTPS site. Use wss:// or run local bridge.`;
+        } else if (isHttpsPage && url.startsWith('wss://localhost')) {
+          msg = `Bridge Error: Could not connect to local bridge at ${url}. Ensure bridge is running (npm run bridge) and visit https://localhost:3001 once in browser to accept certificate.`;
+        }
         this.lastError = msg;
         this.notifyErrorListeners(msg);
         if (import.meta.env?.DEV) {
@@ -154,7 +177,11 @@ export class ESP32Adapter implements DataAdapter {
       };
     } catch (err) {
       this.ws = null;
-      const msg = err instanceof Error ? err.message : String(err);
+      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      let msg = err instanceof Error ? err.message : String(err);
+      if (isHttpsPage && url.startsWith('ws://')) {
+        msg = `Browser Security Block: Cannot connect to insecure ${url} from HTTPS page.`;
+      }
       this.lastError = msg;
       this.notifyErrorListeners(msg);
       if (import.meta.env?.DEV) {
