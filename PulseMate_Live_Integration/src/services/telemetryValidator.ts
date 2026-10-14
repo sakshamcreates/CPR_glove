@@ -1,47 +1,82 @@
 import { CPRStatus, ESP32TelemetryMessage } from '../types/cpr';
 
-const VALID_STATUSES = new Set(['OPTIMAL', 'SLOW', 'FAST', 'TILT', 'PAUSED', 'STANDBY', 'CRITICAL']);
+const VALID_STATUSES = new Set([
+  'OPTIMAL',
+  'SLOW',
+  'FAST',
+  'TILT',
+  'PAUSED',
+  'STANDBY',
+  'CRITICAL',
+  'TOO_SLOW',
+  'TOO_FAST',
+  'POSITION_ALERT',
+  'PAUSE_WARNING',
+]);
 
 function finiteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
 /**
- * Normalizes either the original demo/gateway contract or the current PulseMate
- * ESP32 firmware packet into the UI's internal telemetry contract.
+ * Normalizes either the original demo/gateway contract or the PulseMate
+ * ESP32-S3 firmware packet into the UI's internal telemetry contract.
  *
- * Current firmware sample:
- * { type: "telemetry", t: 690586, sample_seq: 171710, sensor_ok: true, sample_age_ms: 1,
- *   ax: 0.110, ay: 0.358, az: 1.042, vert_g: -0.014, tilt_deg: 0.4, tilt_status: "ok",
- *   rate: null, rate_status: "none", comp_in_cycle: 0, total_compressions: 0, session: "standby" }
+ * Firmware telemetry sample:
+ * {
+ *   "type": "telemetry",
+ *   "t": 452777,
+ *   "sample_seq": 112285,
+ *   "sensor_ok": true,
+ *   "sample_age_ms": 3,
+ *   "ax": 0.131,
+ *   "ay": 0.169,
+ *   "az": 1.105,
+ *   "vert_g": 0,
+ *   "tilt_deg": 5.4,
+ *   "tilt_status": "ok",
+ *   "rate": null,
+ *   "rate_status": "none",
+ *   "comp_in_cycle": 23,
+ *   "total_compressions": 62,
+ *   "session": "measuring"
+ * }
  */
 export function validateTelemetryMessage(raw: unknown): ESP32TelemetryMessage | null {
   if (!raw || typeof raw !== 'object') return null;
   const obj = raw as Record<string, unknown>;
-  if (obj.type !== 'telemetry') return null;
 
-  // Current PulseMate firmware payload.
-  if (
+  // Check if packet is explicit telemetry or contains firmware telemetry signature
+  const isTelemetryType = obj.type === 'telemetry';
+  const hasTelemetryFields =
     'sample_seq' in obj ||
     'total_compressions' in obj ||
     'tilt_deg' in obj ||
     'sensor_ok' in obj ||
-    'ax' in obj ||
-    'vert_g' in obj
-  ) {
-    const sensorOk = obj.sensor_ok !== false;
+    ('ax' in obj && 'ay' in obj) ||
+    'comp_in_cycle' in obj;
+
+  if (!isTelemetryType && !hasTelemetryFields) {
+    return null;
+  }
+
+  // Current PulseMate firmware payload
+  if (hasTelemetryFields || 'ax' in obj || 'vert_g' in obj) {
+    const sensorOk = obj.sensor_ok !== false && obj.sensorOk !== false;
+
     const count = finiteNumber(obj.comp_in_cycle)
       ? obj.comp_in_cycle
       : finiteNumber(obj.compressionCount)
       ? obj.compressionCount
       : 0;
+
     const total = finiteNumber(obj.total_compressions)
       ? obj.total_compressions
       : finiteNumber(obj.totalCompressions)
       ? obj.totalCompressions
       : count;
 
-    // Handle rate: null as unavailable, not as zero
+    // Handle rate: null as unavailable data, never automatically coerce to zero
     const hasRate = finiteNumber(obj.rate) && obj.rate > 0;
     const rateVal = hasRate ? Math.round(obj.rate as number) : null;
 
@@ -74,12 +109,14 @@ export function validateTelemetryMessage(raw: unknown): ESP32TelemetryMessage | 
       if (rateVal >= 100 && rateVal <= 120) status = 'OPTIMAL';
       else if (rateVal < 100) status = 'SLOW';
       else status = 'FAST';
-    } else if (rateStatus === 'slow') {
+    } else if (rateStatus === 'slow' || rateStatus === 'too_slow') {
       status = 'SLOW';
-    } else if (rateStatus === 'fast') {
+    } else if (rateStatus === 'fast' || rateStatus === 'too_fast') {
       status = 'FAST';
     } else if (rateStatus === 'optimal' || rateStatus === 'ok') {
       status = 'OPTIMAL';
+    } else if (typeof obj.status === 'string' && VALID_STATUSES.has(obj.status.toUpperCase())) {
+      status = obj.status.toUpperCase() as CPRStatus;
     } else if (sessionStr === 'standby') {
       status = 'STANDBY';
     } else {
@@ -92,6 +129,7 @@ export function validateTelemetryMessage(raw: unknown): ESP32TelemetryMessage | 
       : finiteNumber(obj.sampleSeq)
       ? obj.sampleSeq
       : undefined;
+
     const sampleAgeMs = finiteNumber(obj.sample_age_ms)
       ? obj.sample_age_ms
       : finiteNumber(obj.sampleAgeMs)
@@ -134,7 +172,7 @@ export function validateTelemetryMessage(raw: unknown): ESP32TelemetryMessage | 
     };
   }
 
-  // Backwards-compatible contract for the older simulator/gateway.
+  // Backwards-compatible contract for simulator/gateway
   if (
     !finiteNumber(obj.timestamp) || obj.timestamp <= 0 ||
     !finiteNumber(obj.compressionCount) || obj.compressionCount < 0 ||
@@ -149,38 +187,37 @@ export function validateTelemetryMessage(raw: unknown): ESP32TelemetryMessage | 
     return null;
   }
 
-  const legacyRate = Math.round(obj.cprRate);
-  const rateAvailable = legacyRate > 0;
-  const legacyStatus = obj.status as CPRStatus;
+  const rate = Math.round(obj.cprRate as number);
+  const compCount = Math.max(0, Math.round(obj.compressionCount as number));
 
   return {
     type: 'telemetry',
-    timestamp: obj.timestamp,
-    compressionCount: Math.round(obj.compressionCount),
-    comp_in_cycle: Math.round(obj.compressionCount),
-    totalCompressions: finiteNumber(obj.totalCompressions) ? Math.round(obj.totalCompressions) : Math.round(obj.compressionCount),
-    total_compressions: finiteNumber(obj.totalCompressions) ? Math.round(obj.totalCompressions) : Math.round(obj.compressionCount),
-    cprRate: rateAvailable ? legacyRate : null,
-    rate: rateAvailable ? legacyRate : null,
-    rateAvailable,
-    rateStatus: rateAvailable ? (legacyRate >= 100 && legacyRate <= 120 ? 'optimal' : legacyRate < 100 ? 'slow' : 'fast') : 'none',
-    rate_status: rateAvailable ? (legacyRate >= 100 && legacyRate <= 120 ? 'optimal' : legacyRate < 100 ? 'slow' : 'fast') : 'none',
-    peakAcceleration: Number(obj.peakAcceleration.toFixed(2)),
-    acceleration: finiteNumber(obj.acceleration) ? Number(obj.acceleration.toFixed(3)) : Number(obj.peakAcceleration.toFixed(2)),
-    ax: 0,
-    ay: 0,
-    az: finiteNumber(obj.acceleration) ? Number(obj.acceleration.toFixed(3)) : Number(obj.peakAcceleration.toFixed(2)),
-    vertG: 0,
-    vert_g: 0,
-    tiltDeg: Number(obj.tilt.toFixed(1)),
-    tilt_deg: Number(obj.tilt.toFixed(1)),
-    tilt: Number(obj.tilt.toFixed(1)),
-    tiltStatus: obj.tilt > 18 ? 'tilt' : 'ok',
-    tilt_status: obj.tilt > 18 ? 'tilt' : 'ok',
+    timestamp: Date.now(),
     sensorOk: true,
     sensor_ok: true,
     sampleAgeMs: 0,
     sample_age_ms: 0,
-    status: legacyStatus,
+    ax: 0,
+    ay: 0,
+    az: 1.0,
+    vertG: 0,
+    vert_g: 0,
+    tiltDeg: Number((obj.tilt as number).toFixed(1)),
+    tilt_deg: Number((obj.tilt as number).toFixed(1)),
+    tiltStatus: 'ok',
+    tilt_status: 'ok',
+    cprRate: rate,
+    rate: rate,
+    rateStatus: rate >= 100 && rate <= 120 ? 'optimal' : rate < 100 ? 'slow' : 'fast',
+    rate_status: rate >= 100 && rate <= 120 ? 'optimal' : rate < 100 ? 'slow' : 'fast',
+    rateAvailable: true,
+    compressionCount: compCount,
+    comp_in_cycle: compCount,
+    totalCompressions: compCount,
+    total_compressions: compCount,
+    acceleration: 1.0,
+    peakAcceleration: Number((obj.peakAcceleration as number).toFixed(2)),
+    tilt: Number((obj.tilt as number).toFixed(1)),
+    status: obj.status as CPRStatus,
   };
 }

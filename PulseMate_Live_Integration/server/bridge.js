@@ -23,15 +23,40 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
-const ESP32_WS_URL = process.env.ESP32_WS_URL || process.env.VITE_ESP32_WS_URL || 'ws://10.197.64.142:81';
+
+function resolveEsp32Url() {
+  const cliArg = process.argv[2];
+  const envUrl = process.env.ESP32_WS_URL || process.env.VITE_ESP32_WS_URL;
+  const raw = cliArg || envUrl || '10.103.136.142:81';
+
+  let target = raw.trim();
+  if (!target.startsWith('ws://') && !target.startsWith('wss://')) {
+    target = 'ws://' + target;
+  }
+  try {
+    const parsed = new URL(target);
+    if (!parsed.port) {
+      target = `${parsed.protocol}//${parsed.hostname}:81${parsed.pathname || ''}${parsed.search || ''}`;
+    }
+  } catch {
+    // Keep target as is if URL parse fails
+  }
+  return target;
+}
+
+const ESP32_WS_URL = resolveEsp32Url();
 const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 // Active connected browser clients
 const browserClients = new Set();
 let esp32Socket = null;
 let esp32Connected = false;
+let esp32ConnectAttempts = 0;
+let lastConnectError = null;
 let reconnectTimer = null;
 let lastTelemetry = null;
+let lastTelemetryTimestamp = null;
+let telemetryPacketCount = 0;
 
 // Ensure TLS certificate for localhost
 const certDir = path.join(__dirname, 'certs');
@@ -52,7 +77,6 @@ function ensureCertificates() {
 
   console.log('[Bridge] Generating self-signed TLS certificate for localhost...');
   try {
-    // Generate valid self-signed certificate using OpenSSL
     execSync(
       `openssl req -x509 -newkey rsa:2048 -keyout "${keyPath}" -out "${certPath}" -days 365 -nodes -subj "/CN=localhost"`,
       { stdio: 'pipe' }
@@ -70,6 +94,39 @@ function ensureCertificates() {
 
 const certs = ensureCertificates();
 
+function getBridgeStatusPayload() {
+  return JSON.stringify({
+    type: 'bridge_status',
+    bridgeOk: true,
+    esp32Connected,
+    targetUrl: ESP32_WS_URL,
+    lastError: lastConnectError,
+    telemetryCount: telemetryPacketCount,
+    lastTelemetryTime: lastTelemetryTimestamp,
+    connectedBrowsers: browserClients.size,
+    message: esp32Connected
+      ? `Bridge connected to ESP32 at ${ESP32_WS_URL}`
+      : `Bridge active, searching for ESP32 at ${ESP32_WS_URL}...`,
+  });
+}
+
+function broadcastBridgeStatus(targetSocket = null) {
+  const frame = createTextFrame(getBridgeStatusPayload());
+  if (targetSocket) {
+    try {
+      targetSocket.write(frame);
+    } catch {}
+  } else {
+    for (const client of browserClients) {
+      try {
+        client.write(frame);
+      } catch {
+        browserClients.delete(client);
+      }
+    }
+  }
+}
+
 /**
  * Connect to physical ESP32-S3 over local Wi-Fi WebSocket
  */
@@ -81,47 +138,41 @@ function connectToEsp32() {
     esp32Socket = null;
   }
 
-  console.log(`[Bridge] Connecting to ESP32 at ${ESP32_WS_URL}...`);
+  esp32ConnectAttempts++;
+  console.log(`[Bridge] Connecting to ESP32 at ${ESP32_WS_URL} (Attempt #${esp32ConnectAttempts})...`);
+
   try {
     const ws = new WebSocket(ESP32_WS_URL);
     esp32Socket = ws;
 
     ws.onopen = () => {
       esp32Connected = true;
-      console.log(`[Bridge] Connected to ESP32 at ${ESP32_WS_URL}`);
-      broadcastToBrowsers(JSON.stringify({
-        type: 'bridge_status',
-        bridgeOk: true,
-        esp32Connected: true,
-        targetUrl: ESP32_WS_URL,
-        message: `Bridge connected to ESP32 at ${ESP32_WS_URL}`,
-      }));
+      lastConnectError = null;
+      console.log(`[Bridge] Connected successfully to ESP32 at ${ESP32_WS_URL}!`);
+      broadcastBridgeStatus();
     };
 
     ws.onmessage = (event) => {
       const dataStr = typeof event.data === 'string' ? event.data : event.data.toString('utf8');
-      try {
-        lastTelemetry = dataStr;
-      } catch {}
-      // Forward telemetry to all connected browser clients
+      lastTelemetry = dataStr;
+      lastTelemetryTimestamp = Date.now();
+      telemetryPacketCount++;
+
+      // Forward message to all connected browser clients
       broadcastToBrowsers(dataStr);
     };
 
     ws.onerror = (err) => {
-      console.warn(`[Bridge] ESP32 connection error (${ESP32_WS_URL}):`, err.message || 'unreachable');
+      lastConnectError = err.message || 'Connection refused or host unreachable';
+      console.warn(`[Bridge] ESP32 connection error (${ESP32_WS_URL}):`, lastConnectError);
     };
 
     ws.onclose = () => {
       esp32Connected = false;
       esp32Socket = null;
       console.log('[Bridge] ESP32 disconnected. Retrying in 2 seconds...');
-      broadcastToBrowsers(JSON.stringify({
-        type: 'bridge_status',
-        bridgeOk: true,
-        esp32Connected: false,
-        targetUrl: ESP32_WS_URL,
-        message: `Bridge running, but ESP32 disconnected. Retrying...`,
-      }));
+      broadcastBridgeStatus();
+
       if (!reconnectTimer) {
         reconnectTimer = setTimeout(() => {
           reconnectTimer = null;
@@ -130,6 +181,7 @@ function connectToEsp32() {
       }
     };
   } catch (err) {
+    lastConnectError = err.message;
     console.warn('[Bridge] Exception initiating ESP32 connection:', err.message);
     if (!reconnectTimer) {
       reconnectTimer = setTimeout(() => {
@@ -206,33 +258,21 @@ function handleUpgrade(req, socket, head) {
   browserClients.add(socket);
   console.log(`[Bridge] Browser connected from ${req.socket.remoteAddress} (Total browsers: ${browserClients.size})`);
 
-  // If we have previous telemetry, send it for immediate display.
-  // Otherwise, send a bridge_status packet letting the frontend know the bridge is online and awaiting ESP32.
-  if (lastTelemetry) {
+  // ALWAYS send immediate bridge status upon client handshake
+  broadcastBridgeStatus(socket);
+
+  // If ESP32 is connected and recent telemetry exists, send it for immediate display
+  if (esp32Connected && lastTelemetry && lastTelemetryTimestamp && (Date.now() - lastTelemetryTimestamp < 30000)) {
     try {
       socket.write(createTextFrame(lastTelemetry));
-    } catch {}
-  } else {
-    try {
-      const statusPacket = JSON.stringify({
-        type: 'bridge_status',
-        bridgeOk: true,
-        esp32Connected,
-        targetUrl: ESP32_WS_URL,
-        message: esp32Connected
-          ? 'Bridge connected to ESP32'
-          : `Bridge running, waiting for ESP32 connection at ${ESP32_WS_URL}`,
-      });
-      socket.write(createTextFrame(statusPacket));
     } catch {}
   }
 
   socket.on('data', (buffer) => {
-    // Process frames from browser if any (e.g. ping/pong)
     if (buffer.length < 2) return;
     const opcode = buffer[0] & 0x0f;
     if (opcode === 0x8) {
-      // Close
+      // Close frame
       browserClients.delete(socket);
       try { socket.end(); } catch {}
     } else if (opcode === 0x9) {
@@ -241,6 +281,34 @@ function handleUpgrade(req, socket, head) {
       pong[0] = 0x8a;
       pong[1] = 0;
       socket.write(pong);
+    } else if (opcode === 0x1) {
+      // Text frame from browser -> forward to ESP32
+      try {
+        const masked = (buffer[1] & 0x80) === 0x80;
+        let payloadLen = buffer[1] & 0x7f;
+        let offset = 2;
+        if (payloadLen === 126) {
+          payloadLen = buffer.readUInt16BE(2);
+          offset = 4;
+        } else if (payloadLen === 127) {
+          offset = 10;
+        }
+        let payload;
+        if (masked) {
+          const mask = buffer.slice(offset, offset + 4);
+          offset += 4;
+          payload = Buffer.alloc(payloadLen);
+          for (let i = 0; i < payloadLen; i++) {
+            payload[i] = buffer[offset + i] ^ mask[i % 4];
+          }
+        } else {
+          payload = buffer.slice(offset, offset + payloadLen);
+        }
+        const msgStr = payload.toString('utf8');
+        if (esp32Socket && esp32Connected) {
+          esp32Socket.send(msgStr);
+        }
+      } catch {}
     }
   });
 
@@ -254,9 +322,8 @@ function handleUpgrade(req, socket, head) {
   socket.on('error', cleanup);
 }
 
-// 1. Create HTTPS/WSS Server (for deployed HTTPS Vercel frontend)
+// Create HTTPS/WSS Server (for deployed HTTPS Vercel frontend)
 const httpsServer = https.createServer(certs, (req, res) => {
-  // Helpful friendly page when visited in browser to accept self-signed cert
   res.writeHead(200, {
     'Content-Type': 'text/html; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
@@ -266,22 +333,31 @@ const httpsServer = https.createServer(certs, (req, res) => {
     <html>
       <head>
         <title>PulseMate WSS Bridge</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-          body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 2rem; max-width: 600px; margin: 0 auto; line-height: 1.5; }
+          body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; padding: 2rem; max-width: 640px; margin: 0 auto; line-height: 1.5; }
           .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; }
-          .ok { color: #10b981; font-weight: bold; }
+          .ok { color: #10b981; font-weight: bold; font-size: 1.15rem; }
+          .warn { color: #f59e0b; font-weight: bold; }
           .badge { display: inline-block; padding: 0.25rem 0.5rem; background: #064e3b; color: #34d399; border-radius: 6px; font-size: 0.85rem; font-family: monospace; }
-          a { color: #38bdf8; }
+          .badge-warn { background: #78350f; color: #fde68a; }
+          .btn { display: inline-block; padding: 0.5rem 1rem; background: #173F35; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 1rem; }
+          code { background: #0f172a; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; color: #38bdf8; }
         </style>
       </head>
       <body>
         <div class="card">
           <h2>PulseMate HTTPS / WSS Bridge</h2>
-          <p class="ok">Certificate Accepted! Secure Bridge is active.</p>
-          <p>Status: <span class="badge">${esp32Connected ? 'ESP32 CONNECTED (' + ESP32_WS_URL + ')' : 'CONNECTING TO ESP32 (' + ESP32_WS_URL + ')'}</span></p>
-          <p>Connected browsers: <strong>${browserClients.size}</strong></p>
-          <hr style="border: none; border-top: 1px solid #334155; margin: 1.5rem 0;" />
-          <p>You can now go back to <a href="https://cprglove.vercel.app/live" target="_blank">cprglove.vercel.app/live</a> and live data will stream automatically.</p>
+          <p class="ok">TLS Certificate Accepted!</p>
+          <p>Your browser now trusts this secure local bridge for <code>wss://localhost:${PORT}</code>.</p>
+          <hr style="border: none; border-top: 1px solid #334155; margin: 1rem 0;" />
+          <p>Target ESP32: <code>${ESP32_WS_URL}</code></p>
+          <p>Hardware Status: <span class="badge ${esp32Connected ? '' : 'badge-warn'}">${esp32Connected ? 'CONNECTED' : 'DISCONNECTED / SEARCHING'}</span></p>
+          <p>Connected Browser Tabs: <strong>${browserClients.size}</strong></p>
+          <p>Packets Forwarded: <strong>${telemetryPacketCount}</strong></p>
+          ${!esp32Connected ? '<p class="warn">If ESP32 is not connecting, confirm that your laptop is connected to Wi-Fi SSID "saksham" and ESP32 IP is ' + ESP32_WS_URL + '.</p>' : ''}
+          <a class="btn" href="https://cprglove.vercel.app/live" target="_blank">Return to Live CPR Monitor</a>
         </div>
       </body>
     </html>
@@ -290,25 +366,20 @@ const httpsServer = https.createServer(certs, (req, res) => {
 
 httpsServer.on('upgrade', handleUpgrade);
 
-// 2. Also listen on plain HTTP/WS so local dev or direct tools can connect too
-const httpServer = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
-  res.end('PulseMate Bridge Running');
-});
-httpServer.on('upgrade', handleUpgrade);
-
 httpsServer.listen(PORT, '0.0.0.0', () => {
   console.log('================================================================');
   console.log(' PULSEMATE HTTPS / WSS LOCAL BRIDGE');
   console.log('================================================================');
   console.log(` Secure WebSocket listening on : wss://localhost:${PORT}`);
   console.log(` Target ESP32 WebSocket       : ${ESP32_WS_URL}`);
+  console.log(` Connected Browsers           : ${browserClients.size}`);
   console.log(` Deployed Website             : https://cprglove.vercel.app/`);
   console.log('================================================================');
-  console.log(' IMPORTANT FIRST-TIME STEP:');
-  console.log(' Open https://localhost:3001 in Chrome/Edge ONCE and click');
-  console.log(' "Advanced" -> "Proceed to localhost (unsafe)" to trust the cert.');
-  console.log(' Then open https://cprglove.vercel.app/live to view real-time data!');
+  console.log(' FIRST-TIME BROWSER SETUP:');
+  console.log(' 1. Ensure your laptop is connected to the same Wi-Fi as ESP32 ("saksham").');
+  console.log(' 2. Open https://localhost:3001 in your browser ONCE and click');
+  console.log('    "Advanced" -> "Proceed to localhost (unsafe)" to trust the cert.');
+  console.log(' 3. Open https://cprglove.vercel.app/live to view live telemetry!');
   console.log('================================================================\n');
 
   // Start connecting to ESP32

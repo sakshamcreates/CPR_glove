@@ -12,6 +12,10 @@ type DataListener = (data: CPRData) => void;
 type StatusListener = (status: ConnectionStatus) => void;
 type ErrorListener = (error: string | null) => void;
 
+function finiteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 export class ESP32Adapter implements DataAdapter {
   private dataListeners: Set<DataListener> = new Set();
   private statusListeners: Set<StatusListener> = new Set();
@@ -23,6 +27,12 @@ export class ESP32Adapter implements DataAdapter {
   private status: ConnectionStatus = 'DISCONNECTED';
   private lastError: string | null = null;
   private helloInfo: ESP32HelloMessage | null = null;
+
+  // Diagnostics and bridge awareness
+  private bridgeConnected: boolean = false;
+  private esp32Reachable: boolean = false;
+  private lastPacketTimestamp: number | null = null;
+  private targetEsp32Url: string = 'ws://10.103.136.142:81';
 
   private reconnectTimer: number | null = null;
   private reconnectAttempts: number = 0;
@@ -106,15 +116,20 @@ export class ESP32Adapter implements DataAdapter {
       if (typeof globalOverride === 'string' && globalOverride) return globalOverride.trim();
     }
 
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
     const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_ESP32_WS_URL : undefined;
     if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
-      return envUrl.trim();
+      const trimmed = envUrl.trim();
+      // On HTTPS, only use envUrl if it uses secure wss:// (or tunnel)
+      if (!isHttps || trimmed.startsWith('wss://')) {
+        return trimmed;
+      }
     }
 
-    // When running on HTTPS (like deployed Vercel), default to secure local bridge endpoint wss://localhost:3001
+    // Default: On HTTPS (like deployed Vercel), default to secure local bridge endpoint wss://localhost:3001
     // On plain HTTP, default to standard local ESP32 IP
-    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    return isHttps ? 'wss://localhost:3001' : 'ws://10.197.64.142:81';
+    return isHttps ? 'wss://localhost:3001' : 'ws://10.103.136.142:81';
   }
 
   public async connect(): Promise<void> {
@@ -126,6 +141,8 @@ export class ESP32Adapter implements DataAdapter {
     this.cleanupSocket();
 
     const url = this.getWsUrl();
+    const isBridgeUrl = url.includes('localhost:3001');
+
     this.updateStatus(this.reconnectAttempts > 0 ? 'RECONNECTING' : 'CONNECTING');
 
     try {
@@ -135,11 +152,29 @@ export class ESP32Adapter implements DataAdapter {
       socket.onopen = () => {
         if (this.ws !== socket) return;
         this.reconnectAttempts = 0;
-        this.lastError = null;
-        this.notifyErrorListeners(null);
-        this.updateStatus('CONNECTED');
+
+        if (isBridgeUrl) {
+          // Connected to the local bridge socket
+          this.bridgeConnected = true;
+          // Do not display fully "CONNECTED" until bridge reports ESP32 is connected and data arrives
+          if (this.esp32Reachable && this.hasReceivedData) {
+            this.updateStatus('CONNECTED');
+          } else {
+            this.updateStatus('CONNECTING');
+          }
+        } else {
+          // Direct connection to ESP32
+          this.esp32Reachable = true;
+          this.bridgeConnected = false;
+          if (this.hasReceivedData) {
+            this.updateStatus('CONNECTED');
+          } else {
+            this.updateStatus('CONNECTING');
+          }
+        }
+
         if (import.meta.env?.DEV) {
-          console.log(`[ESP32Adapter] Connected to WebSocket at ${url}`);
+          console.log(`[ESP32Adapter] WebSocket open to ${url}`);
         }
       };
 
@@ -152,22 +187,32 @@ export class ESP32Adapter implements DataAdapter {
         if (this.ws !== socket) return;
         const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
         let msg = `WebSocket error connecting to ${url}`;
+
         if (isHttpsPage && url.startsWith('ws://')) {
-          msg = `Mixed Content Block: Browser blocked insecure ws:// on HTTPS site. Use wss:// or run local bridge.`;
-        } else if (isHttpsPage && url.startsWith('wss://localhost')) {
-          msg = `Bridge Error: Could not connect to local bridge at ${url}. Ensure bridge is running (npm run bridge) and visit https://localhost:3001 once in browser to accept certificate.`;
+          msg = `Mixed Content Block: Browser blocked insecure ws:// on HTTPS site. Use wss:// or run the local bridge.`;
+        } else if (url.includes('localhost:3001')) {
+          msg = `Bridge Error: Cannot connect to local bridge at ${url}. Ensure bridge is running (npm.cmd run bridge) and open https://localhost:3001 once in your browser to accept the TLS certificate.`;
+        } else {
+          msg = `Connection Failed: Unable to reach ${url}. Check that ESP32 is powered on and laptop is on Wi-Fi 'saksham'.`;
         }
+
+        this.bridgeConnected = false;
+        this.esp32Reachable = false;
         this.lastError = msg;
         this.notifyErrorListeners(msg);
+        this.updateStatus('ERROR');
+
         if (import.meta.env?.DEV) {
           console.warn('[ESP32Adapter]', msg, err);
         }
-        this.updateStatus('ERROR');
       };
 
       socket.onclose = () => {
         if (this.ws !== socket) return;
         this.ws = null;
+        this.bridgeConnected = false;
+        this.esp32Reachable = false;
+
         if (!this.isIntentionallyDisconnected) {
           this.updateStatus('RECONNECTING');
           this.scheduleReconnect();
@@ -177,16 +222,17 @@ export class ESP32Adapter implements DataAdapter {
       };
     } catch (err) {
       this.ws = null;
+      this.bridgeConnected = false;
+      this.esp32Reachable = false;
       const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
       let msg = err instanceof Error ? err.message : String(err);
+
       if (isHttpsPage && url.startsWith('ws://')) {
         msg = `Browser Security Block: Cannot connect to insecure ${url} from HTTPS page.`;
       }
+
       this.lastError = msg;
       this.notifyErrorListeners(msg);
-      if (import.meta.env?.DEV) {
-        console.warn('[ESP32Adapter] Connection attempt failed:', err);
-      }
       this.updateStatus('ERROR');
       this.scheduleReconnect();
     }
@@ -261,6 +307,18 @@ export class ESP32Adapter implements DataAdapter {
 
   public getHelloInfo(): ESP32HelloMessage | null {
     return this.helloInfo;
+  }
+
+  public getLastPacketTime(): number | null {
+    return this.lastPacketTimestamp;
+  }
+
+  public isBridgeActive(): boolean {
+    return this.bridgeConnected;
+  }
+
+  public isDeviceReachable(): boolean {
+    return this.esp32Reachable;
   }
 
   public startSession(): void {
@@ -342,42 +400,158 @@ export class ESP32Adapter implements DataAdapter {
   }
 
   /**
-   * Process and validate incoming WebSocket raw payload
+   * Process and validate incoming WebSocket raw payload with full firmware event support.
    */
   private handleIncomingMessage(rawData: unknown): void {
     try {
       const text = typeof rawData === 'string' ? rawData : String(rawData);
       const parsed = JSON.parse(text);
 
-      // Handle hello packet from firmware
-      if (parsed && typeof parsed === 'object' && (parsed as Record<string, unknown>).type === 'hello') {
-        if (import.meta.env?.DEV) console.log('[ESP32Adapter] Firmware hello:', parsed);
-        this.helloInfo = parsed as ESP32HelloMessage;
+      if (!parsed || typeof parsed !== 'object') {
+        return;
+      }
+
+      const obj = parsed as Record<string, unknown>;
+      const msgType = typeof obj.type === 'string' ? obj.type : '';
+
+      // 1. Hello Packet from firmware
+      if (msgType === 'hello') {
+        if (import.meta.env?.DEV) console.log('[ESP32Adapter] Firmware hello:', obj);
+        this.helloInfo = obj as unknown as ESP32HelloMessage;
+        if (finiteNumber(obj.cycle_size) && obj.cycle_size > 0) {
+          this.targetCount = obj.cycle_size;
+        }
+        this.lastPacketTimestamp = Date.now();
         this.notifyDataListeners();
         return;
       }
 
-      // Handle bridge status packet
-      if (parsed && typeof parsed === 'object' && (parsed as Record<string, unknown>).type === 'bridge_status') {
-        const b = parsed as Record<string, unknown>;
-        if (import.meta.env?.DEV) console.log('[ESP32Adapter] Bridge status:', b);
-        if (b.esp32Connected === false && typeof b.targetUrl === 'string') {
-          const msg = `Bridge is active, but target ESP32 (${b.targetUrl}) is not reachable. Verify Wi-Fi and IP.`;
-          this.lastError = msg;
-          this.notifyErrorListeners(msg);
-        } else {
+      // 2. Bridge Status Packet from local bridge
+      if (msgType === 'bridge_status') {
+        this.bridgeConnected = Boolean(obj.bridgeOk);
+        const esp32Connected = Boolean(obj.esp32Connected);
+        const target = typeof obj.targetUrl === 'string' ? obj.targetUrl : this.targetEsp32Url;
+        this.targetEsp32Url = target;
+
+        if (esp32Connected) {
+          this.esp32Reachable = true;
           this.lastError = null;
           this.notifyErrorListeners(null);
+          // Only show fully CONNECTED once real data is flowing
+          if (this.hasReceivedData) {
+            this.updateStatus('CONNECTED');
+          } else {
+            this.updateStatus('CONNECTING');
+          }
+        } else {
+          this.esp32Reachable = false;
+          const msg = `Bridge is running on localhost:3001, but ESP32 at ${target} is unreachable. Check that ESP32 is powered on and laptop is connected to Wi-Fi 'saksham'.`;
+          this.lastError = msg;
+          this.notifyErrorListeners(msg);
+          this.updateStatus('CONNECTING');
         }
+        this.notifyDataListeners();
         return;
       }
 
-      const validated = validateTelemetryMessage(parsed);
+      // 3. Compression Event
+      if (msgType === 'compression') {
+        this.hasReceivedData = true;
+        this.esp32Reachable = true;
+        this.lastPacketTimestamp = Date.now();
+
+        if (finiteNumber(obj.comp_in_cycle)) {
+          this.compInCycle = obj.comp_in_cycle;
+          this.compressionCount = obj.comp_in_cycle;
+        } else if (finiteNumber(obj.count)) {
+          this.compInCycle = obj.count;
+          this.compressionCount = obj.count;
+        }
+
+        if (finiteNumber(obj.total_compressions)) {
+          this.totalCompressions = obj.total_compressions;
+        } else {
+          this.totalCompressions++;
+        }
+
+        if (finiteNumber(obj.peak_g)) {
+          this.peakAcceleration = Math.max(this.peakAcceleration, obj.peak_g);
+        }
+
+        if (finiteNumber(obj.rate) && obj.rate > 0) {
+          this.cprRate = Math.round(obj.rate);
+          this.rateAvailable = true;
+        }
+
+        this.cycle = Math.max(1, Math.floor(this.totalCompressions / this.targetCount) + 1);
+        this.updateStatus('CONNECTED');
+        this.notifyDataListeners();
+        return;
+      }
+
+      // 4. Cycle Complete Event
+      if (msgType === 'cycle_complete') {
+        this.hasReceivedData = true;
+        this.lastPacketTimestamp = Date.now();
+        if (finiteNumber(obj.cycle)) {
+          this.cycle = obj.cycle + 1;
+        } else {
+          this.cycle++;
+        }
+        this.compInCycle = 0;
+        this.compressionCount = 0;
+        this.notifyDataListeners();
+        return;
+      }
+
+      // 5. Session End Event
+      if (msgType === 'session_end') {
+        this.lastPacketTimestamp = Date.now();
+        this.sessionState = 'standby';
+        this.cprStatus = 'STANDBY';
+        this.cprRate = null;
+        this.rateAvailable = false;
+        this.notifyDataListeners();
+        return;
+      }
+
+      // 6. Session Cancelled Event
+      if (msgType === 'session_cancelled') {
+        this.lastPacketTimestamp = Date.now();
+        this.sessionState = 'standby';
+        this.cprStatus = 'STANDBY';
+        this.cprRate = null;
+        this.rateAvailable = false;
+        this.notifyDataListeners();
+        return;
+      }
+
+      // 7. Sensor Recover Event
+      if (msgType === 'sensor_recover') {
+        this.sensorOk = true;
+        this.lastPacketTimestamp = Date.now();
+        this.notifyDataListeners();
+        return;
+      }
+
+      // 8. Pong Event (Heartbeat acknowledgement)
+      if (msgType === 'pong') {
+        this.lastPacketTimestamp = Date.now();
+        return;
+      }
+
+      // 9. Standard / High-Frequency Telemetry Packet
+      const validated = validateTelemetryMessage(obj);
       if (!validated) {
         return;
       }
 
       this.hasReceivedData = true;
+      this.esp32Reachable = true;
+      this.lastPacketTimestamp = Date.now();
+      this.updateStatus('CONNECTED');
+      this.lastError = null;
+      this.notifyErrorListeners(null);
 
       // Update state from validated message
       const prevCount = this.compressionCount;
@@ -451,7 +625,6 @@ export class ESP32Adapter implements DataAdapter {
     if (this.isIntentionallyDisconnected || this.reconnectTimer !== null) return;
 
     this.reconnectAttempts++;
-    // Exponential backoff: 1s, 2s, 4s, capped at 8s
     const delay = Math.min(8000, 1000 * Math.pow(1.8, this.reconnectAttempts - 1));
 
     if (import.meta.env?.DEV) {

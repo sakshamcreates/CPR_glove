@@ -123,35 +123,51 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               : 'bg-canvas-secondary border-border text-content-secondary'
           }`}
         >
-          <div className="flex items-center gap-2">
-            {isConnected ? (
-              <Wifi className="w-4 h-4 text-status-success shrink-0" />
-            ) : (
-              <WifiOff className="w-4 h-4 text-content-muted shrink-0" />
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {isConnected ? (
+                <Wifi className="w-4 h-4 text-status-success shrink-0" />
+              ) : (
+                <WifiOff className="w-4 h-4 text-content-muted shrink-0" />
+              )}
+              <span className="font-semibold uppercase tracking-wide">
+                {isConnected
+                  ? 'ESP32-S3 LIVE STREAM CONNECTED:'
+                  : isReconnecting
+                  ? 'CONNECTING TO ESP32:'
+                  : 'ESP32 STANDBY:'}
+              </span>
+              <span>
+                {isConnected
+                  ? data?.sampleSeq !== undefined
+                    ? `Receiving continuous telemetry (Seq #${data.sampleSeq}, Sensor: ${
+                        sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
+                      }, Session: ${sessionState.toUpperCase()}).`
+                    : 'Connected to WebSocket. Awaiting sensor stream from MPU6050...'
+                  : error
+                  ? `${error} (Auto-retrying...)`
+                  : isReconnecting
+                  ? `Attempting connection to ${wsUrl}...`
+                  : `No WebSocket connection (${wsUrl}). Click Open Live Monitor to configure.`}
+              </span>
+            </div>
+            {error && error.includes('https://localhost:3001') && (
+              <div className="pt-1 pl-6 flex items-center gap-2">
+                <a
+                  href="https://localhost:3001"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-brand-green text-white font-semibold text-[11px] shadow-subtle hover:bg-brand-green/90 transition-colors"
+                >
+                  Open https://localhost:3001 to Trust Certificate ↗
+                </a>
+              </div>
             )}
-            <span className="font-semibold uppercase tracking-wide">
-              {isConnected
-                ? 'ESP32-S3 LIVE STREAM CONNECTED:'
-                : isReconnecting
-                ? 'CONNECTING TO ESP32:'
-                : 'ESP32 STANDBY:'}
-            </span>
-            <span>
-              {isConnected
-                ? `Receiving continuous telemetry (Seq #${data?.sampleSeq ?? 0}, Sensor: ${
-                    sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
-                  }, Session: ${sessionState.toUpperCase()}).`
-                : error
-                ? `${error} (Auto-retrying...)`
-                : isReconnecting
-                ? `Attempting connection to ${wsUrl}...`
-                : `No WebSocket connection (${wsUrl}). Click Open Live Monitor to configure.`}
-            </span>
           </div>
           {(!isConnected || error) && (
             <button
               onClick={reconnect}
-              className="px-2 py-0.5 rounded bg-white border border-border text-[11px] font-semibold text-content-primary hover:bg-canvas-primary"
+              className="px-2 py-0.5 rounded bg-white border border-border text-[11px] font-semibold text-content-primary hover:bg-canvas-primary shrink-0"
             >
               Retry Connection
             </button>

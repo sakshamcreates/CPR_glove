@@ -257,21 +257,27 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
             : 'bg-canvas-secondary border-border text-content-secondary'
         }`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-col gap-0.5 min-w-0">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 {isConnected ? (
                   <Wifi className="w-4 h-4 text-status-success shrink-0" />
                 ) : (
                   <WifiOff className="w-4 h-4 text-content-muted shrink-0" />
                 )}
                 <span className="font-semibold uppercase tracking-wide">
-                  {isConnected ? 'ESP32-S3 LIVE STREAM CONNECTED:' : isReconnecting ? 'CONNECTING TO ESP32:' : 'ESP32 STANDBY:'}
+                  {isConnected
+                    ? 'ESP32-S3 LIVE STREAM CONNECTED:'
+                    : isReconnecting
+                    ? 'CONNECTING TO ESP32:'
+                    : 'ESP32 STANDBY:'}
                 </span>
                 <span>
                   {isConnected
-                    ? `Seq #${data?.sampleSeq ?? 0} · Sensor: ${
-                        sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
-                      } · Session: ${sessionState.toUpperCase()}`
+                    ? data?.sampleSeq !== undefined
+                      ? `Seq #${data.sampleSeq} · Sensor: ${
+                          sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
+                        } · Session: ${sessionState.toUpperCase()}`
+                      : 'Connected to WebSocket. Awaiting sensor stream from MPU6050...'
                     : error
                     ? `${error} (Auto-retrying...)`
                     : isReconnecting
@@ -279,6 +285,21 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
                     : `Disconnected from ${wsUrl || 'ESP32'}.`}
                 </span>
               </div>
+              {error && error.includes('https://localhost:3001') && (
+                <div className="pt-1 pl-6 flex items-center gap-2">
+                  <a
+                    href="https://localhost:3001"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-brand-green text-white font-semibold text-[11px] shadow-subtle hover:bg-brand-green/90 transition-colors"
+                  >
+                    Open https://localhost:3001 to Trust Certificate ↗
+                  </a>
+                  <span className="text-content-muted text-[11px]">
+                    (Click Advanced → Proceed to localhost)
+                  </span>
+                </div>
+              )}
               {isConnected && (
                 <span className={`text-[11px] pl-6 ${msSinceLast !== null && msSinceLast > 3000 ? 'text-status-warning font-semibold' : 'text-content-muted'}`}>
                   {msSinceLast !== null
@@ -319,7 +340,7 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
                     type="text"
                     value={inputUrl}
                     onChange={(e) => setInputUrl(e.target.value)}
-                    placeholder="wss://localhost:3001 or ws://<IP>:81"
+                    placeholder="wss://localhost:3001 or ws://10.103.136.142:81"
                     className="px-2 py-0.5 rounded border border-border text-[11px] font-mono w-56 bg-white"
                   />
                   <button
@@ -342,7 +363,7 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
             </div>
 
             {/* Quick Presets */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-content-muted">Presets:</span>
               <button
                 onClick={() => setCustomWsUrl('wss://localhost:3001')}
@@ -351,20 +372,31 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
                     ? 'bg-brand-green text-white border-brand-green'
                     : 'bg-white border-border hover:bg-canvas-primary'
                 }`}
-                title="Secure bridge on this laptop for deployed HTTPS Vercel"
+                title="Secure local bridge on laptop for deployed HTTPS Vercel"
               >
                 Local Bridge (wss://)
               </button>
               <button
-                onClick={() => setCustomWsUrl('ws://10.197.64.142:81')}
+                onClick={() => setCustomWsUrl('ws://10.103.136.142:81')}
                 className={`px-1.5 py-0.5 rounded border text-[10px] ${
-                  wsUrl.includes(':81')
+                  wsUrl === 'ws://10.103.136.142:81'
                     ? 'bg-brand-green text-white border-brand-green'
                     : 'bg-white border-border hover:bg-canvas-primary'
                 }`}
-                title="Direct ESP32 WebSocket (only works when accessing over HTTP or local bridge)"
+                title="Direct ESP32 IP on local Wi-Fi (Note: browsers block ws:// on HTTPS sites)"
               >
-                Direct ESP32 (ws://)
+                Direct IP (10.103.136.142:81)
+              </button>
+              <button
+                onClick={() => setCustomWsUrl('ws://pulsemate.local:81')}
+                className={`px-1.5 py-0.5 rounded border text-[10px] ${
+                  wsUrl === 'ws://pulsemate.local:81'
+                    ? 'bg-brand-green text-white border-brand-green'
+                    : 'bg-white border-border hover:bg-canvas-primary'
+                }`}
+                title="Direct mDNS hostname (pulsemate.local:81)"
+              >
+                mDNS (pulsemate.local:81)
               </button>
             </div>
           </div>
