@@ -227,7 +227,7 @@ export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ onNavigate }) => {
                     <span className="w-2.5 h-2.5 rounded-sm bg-status-warning" /> Outside target
                   </span>
                 </div>
-                <span>Peak Acceleration: {maxPeakAcceleration.toFixed(2)} g</span>
+                <span>Max Observed Acceleration: {maxPeakAcceleration.toFixed(2)} g</span>
               </div>
             </div>
 

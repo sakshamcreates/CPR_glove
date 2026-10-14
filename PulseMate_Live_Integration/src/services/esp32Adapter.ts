@@ -357,6 +357,21 @@ export class ESP32Adapter implements DataAdapter {
         return;
       }
 
+      // Handle bridge status packet
+      if (parsed && typeof parsed === 'object' && (parsed as Record<string, unknown>).type === 'bridge_status') {
+        const b = parsed as Record<string, unknown>;
+        if (import.meta.env?.DEV) console.log('[ESP32Adapter] Bridge status:', b);
+        if (b.esp32Connected === false && typeof b.targetUrl === 'string') {
+          const msg = `Bridge is active, but target ESP32 (${b.targetUrl}) is not reachable. Verify Wi-Fi and IP.`;
+          this.lastError = msg;
+          this.notifyErrorListeners(msg);
+        } else {
+          this.lastError = null;
+          this.notifyErrorListeners(null);
+        }
+        return;
+      }
+
       const validated = validateTelemetryMessage(parsed);
       if (!validated) {
         return;

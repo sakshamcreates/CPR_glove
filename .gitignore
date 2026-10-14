@@ -3,3 +3,5 @@
 node_modules/
 dist/
 **/tsconfig.tsbuildinfo
+server/certs/
+PulseMate_Live_Integration/server/certs/

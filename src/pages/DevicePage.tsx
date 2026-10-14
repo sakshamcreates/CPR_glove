@@ -7,8 +7,9 @@ import { useCPRData } from '../hooks/useCPRData';
 import { Radio, Sliders, AlertCircle, Cpu, Activity, Zap, Volume2, Bell, ChevronDown } from 'lucide-react';
 
 export const DevicePage: React.FC = () => {
-  const { adapterMode, connectionStatus } = useCPRData();
+  const { data, adapterMode, connectionStatus, helloInfo } = useCPRData();
   const isLiveEsp32 = adapterMode === 'esp32';
+  const isConnected = connectionStatus === 'CONNECTED';
 
   return (
     <PageContainer
@@ -70,8 +71,20 @@ export const DevicePage: React.FC = () => {
               COMMUNICATION
             </span>
             <span className="font-mono text-xs font-semibold text-content-primary flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-content-muted" />
-              {isLiveEsp32 && connectionStatus === 'CONNECTED' ? 'WebSocket Active' : 'WebSocket / Demo Mode'}
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isLiveEsp32 && isConnected
+                    ? 'bg-status-success'
+                    : isLiveEsp32
+                    ? 'bg-status-warning'
+                    : 'bg-content-muted'
+                }`}
+              />
+              {isLiveEsp32 && isConnected
+                ? 'WebSocket Active'
+                : isLiveEsp32
+                ? connectionStatus
+                : 'Demo Mode'}
             </span>
           </div>
 
@@ -80,7 +93,7 @@ export const DevicePage: React.FC = () => {
               CONTROLLER
             </span>
             <span className="font-mono text-sm font-semibold text-content-primary">
-              ESP32-S3
+              {helloInfo?.device ? `${helloInfo.device} (ESP32-S3)` : 'ESP32-S3'}
             </span>
           </div>
 
@@ -88,8 +101,20 @@ export const DevicePage: React.FC = () => {
             <span className="font-mono text-[11px] text-content-secondary uppercase block mb-1">
               MOTION SENSOR
             </span>
-            <span className="font-mono text-sm font-semibold text-content-primary">
-              MPU6050
+            <span
+              className={`font-mono text-sm font-semibold ${
+                isConnected
+                  ? data?.sensorOk !== false
+                    ? 'text-status-success'
+                    : 'text-status-danger'
+                  : 'text-content-primary'
+              }`}
+            >
+              {isConnected
+                ? data?.sensorOk !== false
+                  ? 'MPU6050 (OK)'
+                  : 'MPU6050 (Fault)'
+                : 'MPU6050'}
             </span>
           </div>
 
@@ -106,8 +131,12 @@ export const DevicePage: React.FC = () => {
             <span className="font-mono text-[11px] text-content-secondary uppercase block mb-1">
               FIRMWARE
             </span>
-            <span className="font-mono text-xs text-content-muted">
-              Not available yet
+            <span className="font-mono text-xs text-content-primary">
+              {helloInfo
+                ? `${helloInfo.sample_hz}Hz / ${helloInfo.telemetry_hz}Hz`
+                : isConnected
+                ? 'Live Firmware'
+                : 'Standby'}
             </span>
           </div>
 
@@ -116,7 +145,7 @@ export const DevicePage: React.FC = () => {
               BATTERY
             </span>
             <span className="font-mono text-xs text-content-muted">
-              Not available yet
+              USB-C Powered
             </span>
           </div>
         </div>

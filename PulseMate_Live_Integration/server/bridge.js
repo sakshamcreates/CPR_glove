@@ -89,6 +89,13 @@ function connectToEsp32() {
     ws.onopen = () => {
       esp32Connected = true;
       console.log(`[Bridge] Connected to ESP32 at ${ESP32_WS_URL}`);
+      broadcastToBrowsers(JSON.stringify({
+        type: 'bridge_status',
+        bridgeOk: true,
+        esp32Connected: true,
+        targetUrl: ESP32_WS_URL,
+        message: `Bridge connected to ESP32 at ${ESP32_WS_URL}`,
+      }));
     };
 
     ws.onmessage = (event) => {
@@ -108,6 +115,13 @@ function connectToEsp32() {
       esp32Connected = false;
       esp32Socket = null;
       console.log('[Bridge] ESP32 disconnected. Retrying in 2 seconds...');
+      broadcastToBrowsers(JSON.stringify({
+        type: 'bridge_status',
+        bridgeOk: true,
+        esp32Connected: false,
+        targetUrl: ESP32_WS_URL,
+        message: `Bridge running, but ESP32 disconnected. Retrying...`,
+      }));
       if (!reconnectTimer) {
         reconnectTimer = setTimeout(() => {
           reconnectTimer = null;
@@ -192,10 +206,24 @@ function handleUpgrade(req, socket, head) {
   browserClients.add(socket);
   console.log(`[Bridge] Browser connected from ${req.socket.remoteAddress} (Total browsers: ${browserClients.size})`);
 
-  // Immediately send the last known telemetry packet so dashboard has instant data
+  // If we have previous telemetry, send it for immediate display.
+  // Otherwise, send a bridge_status packet letting the frontend know the bridge is online and awaiting ESP32.
   if (lastTelemetry) {
     try {
       socket.write(createTextFrame(lastTelemetry));
+    } catch {}
+  } else {
+    try {
+      const statusPacket = JSON.stringify({
+        type: 'bridge_status',
+        bridgeOk: true,
+        esp32Connected,
+        targetUrl: ESP32_WS_URL,
+        message: esp32Connected
+          ? 'Bridge connected to ESP32'
+          : `Bridge running, waiting for ESP32 connection at ${ESP32_WS_URL}`,
+      });
+      socket.write(createTextFrame(statusPacket));
     } catch {}
   }
 

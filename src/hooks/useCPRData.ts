@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CPRData, ConnectionStatus, AdapterMode } from '../types/cpr';
+import { CPRData, ConnectionStatus, AdapterMode, ESP32HelloMessage } from '../types/cpr';
 import {
   getDataAdapter,
   getAdapterMode,
@@ -13,6 +13,14 @@ export function useCPRData() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(() =>
     getDataAdapter().getStatus()
   );
+  const [error, setError] = useState<string | null>(() => {
+    const adapter = getDataAdapter();
+    return adapter.getError ? adapter.getError() : null;
+  });
+  const [helloInfo, setHelloInfo] = useState<ESP32HelloMessage | null>(() => {
+    const adapter = getDataAdapter();
+    return adapter.getHelloInfo ? adapter.getHelloInfo() : null;
+  });
   const [isPaused, setIsPaused] = useState<boolean>(() => {
     const adapter = getDataAdapter();
     return adapter.isPaused ? adapter.isPaused() : false;
@@ -23,10 +31,19 @@ export function useCPRData() {
 
     const subscribeToAdapter = (adapter = activeAdapter) => {
       setConnectionStatus(adapter.getStatus());
+      if (adapter.getError) {
+        setError(adapter.getError());
+      }
+      if (adapter.getHelloInfo) {
+        setHelloInfo(adapter.getHelloInfo());
+      }
 
       // Data subscription
       const unsubscribeData = adapter.subscribe((newData: CPRData) => {
         setData(newData);
+        if (newData.helloInfo) {
+          setHelloInfo(newData.helloInfo);
+        }
         if (adapter.isPaused) {
           setIsPaused(adapter.isPaused());
         }
@@ -40,10 +57,21 @@ export function useCPRData() {
         });
       }
 
+      // Error change subscription
+      let unsubscribeError: (() => void) | undefined;
+      if (adapter.onError) {
+        unsubscribeError = adapter.onError((err) => {
+          setError(err);
+        });
+      }
+
       return () => {
         unsubscribeData();
         if (unsubscribeStatus) {
           unsubscribeStatus();
+        }
+        if (unsubscribeError) {
+          unsubscribeError();
         }
       };
     };
@@ -91,14 +119,42 @@ export function useCPRData() {
     setGlobalAdapterMode(newMode);
   }, []);
 
+  const [wsUrl, setWsUrlState] = useState<string>(() => {
+    const adapter = getDataAdapter();
+    return adapter.getWsUrl ? adapter.getWsUrl() : '';
+  });
+
+  const setCustomWsUrl = useCallback((url: string) => {
+    const adapter = getDataAdapter();
+    if (adapter.setCustomWsUrl) {
+      adapter.setCustomWsUrl(url);
+      setWsUrlState(adapter.getWsUrl ? adapter.getWsUrl() : url);
+    }
+  }, []);
+
+  const reconnect = useCallback(() => {
+    const adapter = getDataAdapter();
+    adapter.disconnect();
+    adapter.connect();
+    if (adapter.getWsUrl) {
+      setWsUrlState(adapter.getWsUrl());
+    }
+  }, []);
+
   return {
     data,
+    latestTelemetry: data,
     connectionStatus,
+    error,
+    helloInfo,
     adapterMode,
     setAdapterMode,
     isPaused,
     pause,
     resume,
     reset,
+    reconnect,
+    wsUrl,
+    setCustomWsUrl,
   };
 }

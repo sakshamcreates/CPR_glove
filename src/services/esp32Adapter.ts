@@ -1,16 +1,29 @@
-import { CPRData, CPRSession, ConnectionStatus, DataAdapter, ESP32TelemetryMessage } from '../types/cpr';
+import {
+  CPRData,
+  CPRSession,
+  ConnectionStatus,
+  DataAdapter,
+  ESP32HelloMessage,
+  ESP32TelemetryMessage,
+} from '../types/cpr';
 import { validateTelemetryMessage } from './telemetryValidator';
 
 type DataListener = (data: CPRData) => void;
 type StatusListener = (status: ConnectionStatus) => void;
+type ErrorListener = (error: string | null) => void;
 
 export class ESP32Adapter implements DataAdapter {
   private dataListeners: Set<DataListener> = new Set();
   private statusListeners: Set<StatusListener> = new Set();
+  private errorListeners: Set<ErrorListener> = new Set();
+
   private ws: WebSocket | null = null;
-  private wsUrl: string;
+  private customWsUrl?: string;
 
   private status: ConnectionStatus = 'DISCONNECTED';
+  private lastError: string | null = null;
+  private helloInfo: ESP32HelloMessage | null = null;
+
   private reconnectTimer: number | null = null;
   private reconnectAttempts: number = 0;
   private isIntentionallyDisconnected: boolean = true;
@@ -18,19 +31,31 @@ export class ESP32Adapter implements DataAdapter {
   // Waveform buffer (fixed size rolling window of acceleration values in g)
   private readonly BUFFER_SIZE = 80;
   private waveformBuffer: number[] = [];
-  private tickerTimer: number | null = null;
 
   // Telemetry state (holds latest validated telemetry received from ESP32)
-  private cprRate: number = 0;
+  private t?: number = undefined;
+  private sampleSeq?: number = undefined;
+  private sensorOk: boolean = true;
+  private sampleAgeMs: number = 0;
+  private ax: number = 0;
+  private ay: number = 0;
+  private az: number = 1.0;
+  private vertG: number = 0;
+  private tiltDeg: number = 0;
+  private tiltStatus: string = 'ok';
+  private cprRate: number | null = null;
+  private rateAvailable: boolean = false;
+  private rateStatus: string = 'none';
   private compressionCount: number = 0;
+  private compInCycle: number = 0;
   private targetCount: number = 30;
   private totalCompressions: number = 0;
   private cycle: number = 1;
   private tilt: number = 0;
   private instantaneousAcc: number = 1.0;
-  private peakAcceleration: number = 0;
-  private cprStatus: ESP32TelemetryMessage['status'] = 'PAUSED';
-  private strokePhase: number = 0; // 0.0 to 1.0 for waveform pacing
+  private peakAcceleration: number = 1.0;
+  private cprStatus: ESP32TelemetryMessage['status'] = 'STANDBY';
+  private sessionState: string = 'standby';
   private hasReceivedData: boolean = false;
 
   // Session tracking
@@ -42,13 +67,54 @@ export class ESP32Adapter implements DataAdapter {
   private sessionStartCompressions: number = 0;
 
   constructor(customUrl?: string) {
-    const envUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_ESP32_WS_URL;
-    this.wsUrl = customUrl || envUrl || 'ws://localhost:3001';
+    this.customWsUrl = customUrl;
 
-    // Initialize baseline waveform buffer
+    // Initialize baseline waveform buffer with 1.0g (earth gravity at rest)
     for (let i = 0; i < this.BUFFER_SIZE; i++) {
       this.waveformBuffer.push(1.0);
     }
+  }
+
+  public setCustomWsUrl(url: string): void {
+    const trimmed = url.trim();
+    this.customWsUrl = trimmed || undefined;
+    if (typeof window !== 'undefined') {
+      if (trimmed) {
+        window.localStorage.setItem('pulsemate_ws_url', trimmed);
+      } else {
+        window.localStorage.removeItem('pulsemate_ws_url');
+      }
+    }
+    // Reconnect with the new URL if active
+    if (!this.isIntentionallyDisconnected) {
+      this.disconnect();
+      this.connect();
+    }
+  }
+
+  public getWsUrl(): string {
+    if (this.customWsUrl) return this.customWsUrl;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryWs = urlParams.get('wsUrl');
+      if (queryWs) return queryWs.trim();
+
+      const savedWs = window.localStorage.getItem('pulsemate_ws_url');
+      if (savedWs) return savedWs.trim();
+
+      const globalOverride = (window as unknown as Record<string, unknown>).__ESP32_WS_URL__;
+      if (typeof globalOverride === 'string' && globalOverride) return globalOverride.trim();
+    }
+
+    const envUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_ESP32_WS_URL : undefined;
+    if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+      return envUrl.trim();
+    }
+
+    // When running on HTTPS (like deployed Vercel), default to secure local bridge endpoint wss://localhost:3001
+    // On plain HTTP, default to standard local ESP32 IP
+    const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    return isHttps ? 'wss://localhost:3001' : 'ws://10.197.64.142:81';
   }
 
   public async connect(): Promise<void> {
@@ -57,33 +123,50 @@ export class ESP32Adapter implements DataAdapter {
     }
 
     this.isIntentionallyDisconnected = false;
+    this.cleanupSocket();
+
+    const url = this.getWsUrl();
     this.updateStatus(this.reconnectAttempts > 0 ? 'RECONNECTING' : 'CONNECTING');
 
-    this.startTicker();
-
     try {
-      this.ws = new WebSocket(this.wsUrl);
+      const socket = new WebSocket(url);
+      this.ws = socket;
 
-      this.ws.onopen = () => {
+      socket.onopen = () => {
+        if (this.ws !== socket) return;
         this.reconnectAttempts = 0;
+        this.lastError = null;
+        this.notifyErrorListeners(null);
         this.updateStatus('CONNECTED');
         if (import.meta.env?.DEV) {
-          console.log(`[ESP32Adapter] Connected to WebSocket at ${this.wsUrl}`);
+          console.log(`[ESP32Adapter] Connected to WebSocket at ${url}`);
         }
       };
 
-      this.ws.onmessage = (event: MessageEvent) => {
+      socket.onmessage = (event: MessageEvent) => {
+        if (this.ws !== socket) return;
         this.handleIncomingMessage(event.data);
       };
 
-      this.ws.onerror = (err) => {
+      socket.onerror = (err) => {
+        if (this.ws !== socket) return;
+        const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        let msg = `WebSocket error connecting to ${url}`;
+        if (isHttpsPage && url.startsWith('ws://')) {
+          msg = `Mixed Content Block: Browser blocked insecure ws:// on HTTPS site. Use wss:// or run local bridge.`;
+        } else if (isHttpsPage && url.startsWith('wss://localhost')) {
+          msg = `Bridge Error: Could not connect to local bridge at ${url}. Ensure bridge is running (npm run bridge) and visit https://localhost:3001 once in browser to accept certificate.`;
+        }
+        this.lastError = msg;
+        this.notifyErrorListeners(msg);
         if (import.meta.env?.DEV) {
-          console.warn('[ESP32Adapter] WebSocket error:', err);
+          console.warn('[ESP32Adapter]', msg, err);
         }
         this.updateStatus('ERROR');
       };
 
-      this.ws.onclose = () => {
+      socket.onclose = () => {
+        if (this.ws !== socket) return;
         this.ws = null;
         if (!this.isIntentionallyDisconnected) {
           this.updateStatus('RECONNECTING');
@@ -93,6 +176,14 @@ export class ESP32Adapter implements DataAdapter {
         }
       };
     } catch (err) {
+      this.ws = null;
+      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      let msg = err instanceof Error ? err.message : String(err);
+      if (isHttpsPage && url.startsWith('ws://')) {
+        msg = `Browser Security Block: Cannot connect to insecure ${url} from HTTPS page.`;
+      }
+      this.lastError = msg;
+      this.notifyErrorListeners(msg);
       if (import.meta.env?.DEV) {
         console.warn('[ESP32Adapter] Connection attempt failed:', err);
       }
@@ -107,12 +198,25 @@ export class ESP32Adapter implements DataAdapter {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.cleanupSocket();
+    this.updateStatus('DISCONNECTED');
+  }
+
+  private cleanupSocket(): void {
     if (this.ws) {
-      this.ws.close();
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+      try {
+        if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+          this.ws.close();
+        }
+      } catch {
+        // ignore error during close
+      }
       this.ws = null;
     }
-    this.stopTicker();
-    this.updateStatus('DISCONNECTED');
   }
 
   public subscribe(callback: DataListener): () => void {
@@ -139,8 +243,24 @@ export class ESP32Adapter implements DataAdapter {
     };
   }
 
+  public onError(callback: ErrorListener): () => void {
+    this.errorListeners.add(callback);
+    callback(this.lastError);
+    return () => {
+      this.errorListeners.delete(callback);
+    };
+  }
+
   public getStatus(): ConnectionStatus {
     return this.status;
+  }
+
+  public getError(): string | null {
+    return this.lastError;
+  }
+
+  public getHelloInfo(): ESP32HelloMessage | null {
+    return this.helloInfo;
   }
 
   public startSession(): void {
@@ -159,14 +279,15 @@ export class ESP32Adapter implements DataAdapter {
     const duration = Math.max(1, Math.round((endedAt - this.sessionStartedAt) / 1000));
     const totalCompressions = Math.max(0, this.totalCompressions - this.sessionStartCompressions);
 
-    const avgRate = this.sessionRateSamples.length > 0
-      ? Math.round(this.sessionRateSamples.reduce((a, b) => a + b, 0) / this.sessionRateSamples.length)
-      : this.cprRate;
+    const validRates = this.sessionRateSamples.filter((r) => r > 0);
+    const avgRate = validRates.length > 0
+      ? Math.round(validRates.reduce((a, b) => a + b, 0) / validRates.length)
+      : (this.cprRate ?? 0);
 
-    const inTargetCount = this.sessionRateSamples.filter((r) => r >= 100 && r <= 120).length;
-    const targetRangePercentage = this.sessionRateSamples.length > 0
-      ? Math.round((inTargetCount / this.sessionRateSamples.length) * 100)
-      : 85;
+    const inTargetCount = validRates.filter((r) => r >= 100 && r <= 120).length;
+    const targetRangePercentage = validRates.length > 0
+      ? Math.round((inTargetCount / validRates.length) * 100)
+      : 0;
 
     const avgTilt = this.sessionTiltSamples.length > 0
       ? Number((this.sessionTiltSamples.reduce((a, b) => a + b, 0) / this.sessionTiltSamples.length).toFixed(1))
@@ -200,15 +321,23 @@ export class ESP32Adapter implements DataAdapter {
 
   public resume(): void {
     if (this.hasReceivedData) {
-      this.cprStatus = this.cprRate >= 100 && this.cprRate <= 120 ? 'OPTIMAL' : this.cprRate < 100 ? 'SLOW' : 'FAST';
+      if (this.cprRate !== null && this.cprRate > 0) {
+        this.cprStatus = this.cprRate >= 100 && this.cprRate <= 120 ? 'OPTIMAL' : this.cprRate < 100 ? 'SLOW' : 'FAST';
+      } else if (this.sessionState === 'standby') {
+        this.cprStatus = 'STANDBY';
+      } else {
+        this.cprStatus = 'PAUSED';
+      }
     }
     this.notifyDataListeners();
   }
 
   public reset(): void {
     this.compressionCount = 0;
+    this.compInCycle = 0;
     this.cycle = 1;
     this.totalCompressions = 0;
+    this.peakAcceleration = 1.0;
     this.notifyDataListeners();
   }
 
@@ -219,10 +348,32 @@ export class ESP32Adapter implements DataAdapter {
     try {
       const text = typeof rawData === 'string' ? rawData : String(rawData);
       const parsed = JSON.parse(text);
-      const validated = validateTelemetryMessage(parsed);
 
+      // Handle hello packet from firmware
+      if (parsed && typeof parsed === 'object' && (parsed as Record<string, unknown>).type === 'hello') {
+        if (import.meta.env?.DEV) console.log('[ESP32Adapter] Firmware hello:', parsed);
+        this.helloInfo = parsed as ESP32HelloMessage;
+        this.notifyDataListeners();
+        return;
+      }
+
+      // Handle bridge status packet
+      if (parsed && typeof parsed === 'object' && (parsed as Record<string, unknown>).type === 'bridge_status') {
+        const b = parsed as Record<string, unknown>;
+        if (import.meta.env?.DEV) console.log('[ESP32Adapter] Bridge status:', b);
+        if (b.esp32Connected === false && typeof b.targetUrl === 'string') {
+          const msg = `Bridge is active, but target ESP32 (${b.targetUrl}) is not reachable. Verify Wi-Fi and IP.`;
+          this.lastError = msg;
+          this.notifyErrorListeners(msg);
+        } else {
+          this.lastError = null;
+          this.notifyErrorListeners(null);
+        }
+        return;
+      }
+
+      const validated = validateTelemetryMessage(parsed);
       if (!validated) {
-        // Malformed message safely ignored and logged by validator
         return;
       }
 
@@ -230,22 +381,60 @@ export class ESP32Adapter implements DataAdapter {
 
       // Update state from validated message
       const prevCount = this.compressionCount;
+      const prevTotal = this.totalCompressions;
+
+      this.t = validated.t;
+      this.sampleSeq = validated.sampleSeq;
+      this.sensorOk = validated.sensorOk;
+      this.sampleAgeMs = validated.sampleAgeMs ?? 0;
+      this.ax = validated.ax;
+      this.ay = validated.ay;
+      this.az = validated.az;
+      this.vertG = validated.vertG;
+      this.tiltDeg = validated.tiltDeg;
+      this.tiltStatus = validated.tiltStatus;
+
+      // Handle rate: null as unavailable
       this.cprRate = validated.cprRate;
+      this.rateAvailable = validated.rateAvailable;
+      this.rateStatus = validated.rateStatus;
+
+      this.compInCycle = validated.comp_in_cycle;
       this.compressionCount = validated.compressionCount;
-      this.peakAcceleration = validated.peakAcceleration;
+
       this.tilt = validated.tilt;
       this.cprStatus = validated.status;
+      this.sessionState = validated.session || (this.rateAvailable ? 'active' : 'standby');
 
-      // Detect stroke occurrence or count progression
-      if (this.compressionCount > prevCount) {
-        this.totalCompressions += (this.compressionCount - prevCount);
+      this.instantaneousAcc = validated.acceleration;
+      if (this.sessionState === 'standby') {
+        this.peakAcceleration = validated.peakAcceleration;
+      } else {
+        this.peakAcceleration = Math.max(this.peakAcceleration, validated.peakAcceleration);
+      }
+
+      // Add real acceleration directly into waveform buffer
+      this.waveformBuffer.push(this.instantaneousAcc);
+      if (this.waveformBuffer.length > this.BUFFER_SIZE) {
+        this.waveformBuffer.shift();
+      }
+
+      // Handle cumulative compressions
+      if (typeof validated.totalCompressions === 'number') {
+        this.totalCompressions = validated.totalCompressions;
+      } else if (this.compressionCount > prevCount) {
+        this.totalCompressions += this.compressionCount - prevCount;
+      }
+
+      if (this.totalCompressions > prevTotal || this.compressionCount > prevCount) {
         this.cycle = Math.max(1, Math.floor(this.totalCompressions / this.targetCount) + 1);
-        this.strokePhase = 0.25; // Align peak wave with compression event
       }
 
       // Record session metrics if session active
       if (this.isSessionActive) {
-        this.sessionRateSamples.push(this.cprRate);
+        if (this.cprRate !== null && this.cprRate > 0) {
+          this.sessionRateSamples.push(this.cprRate);
+        }
         this.sessionTiltSamples.push(this.tilt);
         this.sessionPeaks.push(this.peakAcceleration);
       }
@@ -255,63 +444,6 @@ export class ESP32Adapter implements DataAdapter {
       if (import.meta.env?.DEV) {
         console.warn('[ESP32Adapter] Failed to parse WebSocket payload:', err);
       }
-    }
-  }
-
-  /**
-   * Waveform pacing ticker: drives smooth continuous acceleration waveform
-   * synchronized to the reported cprRate and peakAcceleration from ESP32.
-   */
-  private startTicker(): void {
-    if (this.tickerTimer !== null) return;
-
-    const intervalMs = 33; // ~30 Hz
-    let lastTime = Date.now();
-
-    this.tickerTimer = window.setInterval(() => {
-      const now = Date.now();
-      const dt = now - lastTime;
-      lastTime = now;
-
-      if (this.status === 'CONNECTED' && this.cprRate > 0 && this.cprStatus !== 'PAUSED') {
-        const periodMs = (60 / Math.max(60, this.cprRate)) * 1000;
-        this.strokePhase = (this.strokePhase + (dt / periodMs)) % 1.0;
-
-        const peak = Math.max(2.5, this.peakAcceleration);
-        let acc = 1.0;
-
-        if (this.strokePhase < 0.25) {
-          const t = this.strokePhase / 0.25;
-          acc = 1.0 + (peak - 1.0) * Math.sin(t * Math.PI * 0.5);
-        } else if (this.strokePhase < 0.50) {
-          const t = (this.strokePhase - 0.25) / 0.25;
-          acc = peak - (peak - 0.5) * Math.sin(t * Math.PI * 0.5);
-        } else if (this.strokePhase < 0.80) {
-          const t = (this.strokePhase - 0.50) / 0.30;
-          acc = 0.5 + (1.0 - 0.5) * Math.sin(t * Math.PI * 0.5);
-        } else {
-          acc = 1.0 + (Math.sin(Date.now() / 150) * 0.03);
-        }
-
-        this.instantaneousAcc = Number(acc.toFixed(2));
-      } else {
-        // Resting 1.0g baseline with subtle sensor tremor
-        this.instantaneousAcc = Number((1.0 + Math.sin(Date.now() / 250) * 0.02).toFixed(2));
-      }
-
-      this.waveformBuffer.push(this.instantaneousAcc);
-      if (this.waveformBuffer.length > this.BUFFER_SIZE) {
-        this.waveformBuffer.shift();
-      }
-
-      this.notifyDataListeners();
-    }, intervalMs);
-  }
-
-  private stopTicker(): void {
-    if (this.tickerTimer !== null) {
-      clearInterval(this.tickerTimer);
-      this.tickerTimer = null;
     }
   }
 
@@ -340,19 +472,50 @@ export class ESP32Adapter implements DataAdapter {
     }
   }
 
+  private notifyErrorListeners(err: string | null): void {
+    for (const listener of this.errorListeners) {
+      listener(err);
+    }
+  }
+
   private getCurrentData(): CPRData {
     return {
       timestamp: Date.now(),
+      t: this.t,
+      sampleSeq: this.sampleSeq,
+      sample_seq: this.sampleSeq,
+      sensorOk: this.sensorOk,
+      sensor_ok: this.sensorOk,
+      sampleAgeMs: this.sampleAgeMs,
+      sample_age_ms: this.sampleAgeMs,
+      ax: this.ax,
+      ay: this.ay,
+      az: this.az,
+      vertG: this.vertG,
+      vert_g: this.vertG,
+      tiltDeg: this.tiltDeg,
+      tilt_deg: this.tiltDeg,
+      tiltStatus: this.tiltStatus,
+      tilt_status: this.tiltStatus,
       cprRate: this.cprRate,
       rate: this.cprRate,
+      rateStatus: this.rateStatus,
+      rate_status: this.rateStatus,
+      rateAvailable: this.rateAvailable,
       compressionCount: this.compressionCount,
+      compInCycle: this.compInCycle,
+      comp_in_cycle: this.compInCycle,
       targetCount: this.targetCount,
       totalCompressions: this.totalCompressions,
+      total_compressions: this.totalCompressions,
       cycle: this.cycle,
       tilt: this.tilt,
       acceleration: this.instantaneousAcc,
       peakAcceleration: this.peakAcceleration,
       status: this.cprStatus,
+      sessionState: this.sessionState,
+      session: this.sessionState,
+      helloInfo: this.helloInfo || undefined,
       waveformBuffer: [...this.waveformBuffer],
     };
   }

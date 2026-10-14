@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StatusIndicator } from './StatusIndicator';
+import { useCPRData } from '../../hooks/useCPRData';
 import { Menu, X, Activity } from 'lucide-react';
 
 interface NavbarProps {
@@ -9,6 +10,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { connectionStatus, adapterMode } = useCPRData();
 
   const navItems = [
     { label: 'Overview', path: '/dashboard' },
@@ -68,7 +70,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
 
         {/* Right: Status Indicator & About Link */}
         <div className="hidden sm:flex items-center gap-4">
-          <StatusIndicator variant="demo" label="DEMO MODE" size="sm" />
+          {adapterMode === 'esp32' ? (
+            <StatusIndicator status={connectionStatus} size="sm" />
+          ) : (
+            <StatusIndicator variant="demo" label="DEMO MODE" size="sm" />
+          )}
           <div className="h-4 w-[1px] bg-border" />
           <button
             onClick={() => handleNav('/about')}
@@ -84,7 +90,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPath, onNavigate }) => {
 
         {/* Mobile Hamburger Toggle */}
         <div className="flex sm:hidden items-center gap-2">
-          <StatusIndicator variant="demo" label="DEMO" size="sm" />
+          {adapterMode === 'esp32' ? (
+            <StatusIndicator status={connectionStatus} size="sm" />
+          ) : (
+            <StatusIndicator variant="demo" label="DEMO" size="sm" />
+          )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-1.5 text-content-secondary hover:text-content-primary focus:outline-none rounded hover:bg-canvas-secondary"

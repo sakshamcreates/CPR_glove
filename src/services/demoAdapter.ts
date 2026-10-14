@@ -283,6 +283,9 @@ class DemoAdapter implements DataAdapter {
       timestamp: Date.now(),
       cprRate: this.compressionRate,
       rate: this.compressionRate,
+      rateAvailable: true,
+      sensorOk: true,
+      sensor_ok: true,
       compressionCount: this.compressionCount,
       targetCount: this.targetCount,
       totalCompressions: this.totalCompressions,
@@ -291,6 +294,7 @@ class DemoAdapter implements DataAdapter {
       acceleration: this.currentInstantAcc,
       peakAcceleration: this.currentPeakAcc,
       status: this.currentStatus,
+      sessionState: 'demo',
       waveformBuffer: [...this.waveformBuffer],
     };
   }

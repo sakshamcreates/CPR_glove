@@ -141,10 +141,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 ? `Receiving continuous telemetry (Seq #${data?.sampleSeq ?? 0}, Sensor: ${
                     sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
                   }, Session: ${sessionState.toUpperCase()}).`
+                : error
+                ? `${error} (Auto-retrying...)`
                 : isReconnecting
                 ? `Attempting connection to ${wsUrl}...`
-                : error
-                ? `${error}`
                 : `No WebSocket connection (${wsUrl}). Click Open Live Monitor to configure.`}
             </span>
           </div>

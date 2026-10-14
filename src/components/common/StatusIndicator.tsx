@@ -75,6 +75,12 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
         textCol: 'text-content-secondary',
         dot: 'bg-content-muted',
       },
+      STANDBY: {
+        text: 'STANDBY',
+        bg: 'bg-canvas-muted',
+        textCol: 'text-content-secondary',
+        dot: 'bg-content-muted',
+      },
       PAUSE_WARNING: {
         text: 'PAUSE DETECTED',
         bg: 'bg-red-50',

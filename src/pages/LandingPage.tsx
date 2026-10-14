@@ -5,6 +5,7 @@ import { SectionHeading } from '../components/common/SectionHeading';
 import { LiveCprHeroSignal } from '../components/visualization/LiveCprHeroSignal';
 import { DashboardMockup } from '../components/visualization/DashboardMockup';
 import { HardwareDiagram } from '../components/visualization/HardwareDiagram';
+import { useCPRData } from '../hooks/useCPRData';
 import {
   Activity,
   ArrowRight,
@@ -19,6 +20,9 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
+  const { connectionStatus, adapterMode } = useCPRData();
+  const isLiveEsp32 = adapterMode === 'esp32';
+  const isConnected = connectionStatus === 'CONNECTED';
   return (
     <div className="space-y-16 sm:space-y-24 pb-16">
       {/* 1. HERO SECTION */}
@@ -74,10 +78,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                     <span className="font-mono text-xs font-semibold uppercase tracking-wider text-content-primary">
                       PULSEMATE SYSTEM
                     </span>
-                    <StatusIndicator status="OFFLINE" label="DEVICE OFFLINE" size="sm" />
+                    {isLiveEsp32 ? (
+                      <StatusIndicator status={connectionStatus} size="sm" />
+                    ) : (
+                      <StatusIndicator variant="demo" label="DEMO MODE" size="sm" />
+                    )}
                   </div>
                   <p className="text-xs text-content-secondary leading-relaxed">
-                    No device connected. Connect the glove to begin monitoring.
+                    {isLiveEsp32 && isConnected
+                      ? 'ESP32-S3 live telemetry active. Open Live Monitor to view real-time CPR rhythm.'
+                      : isLiveEsp32
+                      ? 'Connecting to ESP32-S3 glove hardware over WebSocket...'
+                      : 'Running in simulated demo mode. Connect to hardware on Live Monitor.'}
                   </p>
                 </div>
               </div>

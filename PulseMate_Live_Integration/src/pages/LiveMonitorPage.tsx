@@ -272,10 +272,10 @@ export const LiveMonitorPage: React.FC<LiveMonitorPageProps> = ({ onNavigate }) 
                     ? `Seq #${data?.sampleSeq ?? 0} · Sensor: ${
                         sensorOk ? 'MPU6050 OK' : 'SENSOR FAULT'
                       } · Session: ${sessionState.toUpperCase()}`
+                    : error
+                    ? `${error} (Auto-retrying...)`
                     : isReconnecting
                     ? `Connecting to ${wsUrl || 'configured endpoint'}...`
-                    : error
-                    ? `${error}`
                     : `Disconnected from ${wsUrl || 'ESP32'}.`}
                 </span>
               </div>

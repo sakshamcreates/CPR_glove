@@ -16,7 +16,8 @@ function getInitialMode(): AdapterMode {
       return saved;
     }
   }
-  return 'demo';
+  // Default to esp32 so dashboard connects to real hardware on mount
+  return 'esp32';
 }
 
 let currentMode: AdapterMode = getInitialMode();

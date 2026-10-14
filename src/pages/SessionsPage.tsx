@@ -259,7 +259,7 @@ export const SessionsPage: React.FC<SessionsPageProps> = ({ onNavigate }) => {
 
               <div className="p-3 rounded-lg bg-canvas-primary/60 border border-border">
                 <span className="text-[10px] text-content-secondary uppercase block">
-                  PEAK ACCELERATION
+                  MAX OBSERVED ACCEL
                 </span>
                 <span className="text-xl font-bold text-content-primary mt-0.5 block">
                   {selectedSession.peakAcceleration.toFixed(2)} g
